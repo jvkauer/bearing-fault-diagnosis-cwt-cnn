@@ -1,0 +1,14 @@
+# Ambiente virtual
+venv/
+# Dados (pesados demais pro GitHub)
+data/
+# Cache do Python
+__pycache__/
+*.pyc
+# Checkpoints de Jupyter
+.ipynb_checkpoints/
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+setup_guide.md
