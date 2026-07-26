@@ -1,20 +1,21 @@
 """
-Configuração global de hiperparâmetros e caminhos do projeto CWRU CWT-CNN.
+Configuração global de hiperparâmetros, caminhos e constantes do projeto CWRU CWT-CNN.
 Projeto de Engenharia de Computação - Diagnóstico de Falhas em Rolamentos.
 """
 
 from pathlib import Path
 
 # ==============================================================================
-# 1. Diretores e Caminhos
+# 1. Diretores e Caminhos do Projeto
 # ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 RAW_DATA_DIR = DATA_DIR
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 
-# Subpastas de dados brutos (.mat)
+# Classes do CWRU
 CLASSES = ["normal", "inner_race", "outer_race", "ball"]
+NUM_CLASSES = len(CLASSES)
 
 # ==============================================================================
 # 2. Parâmetros do Sinal e CWRU
@@ -35,12 +36,20 @@ STEP_SIZE = 512  # amostras
 WAVELET = "cmor1.5-1.0"
 
 # Faixa de frequências de interesse para análise de falhas em rolamentos (Hz)
-FREQ_MIN = 50      # Hz
-FREQ_MAX = 4000    # Hz
+FREQ_MIN = 10      # Hz (deve ser > 0 para evitar divisão por zero)
+FREQ_MAX = 6000    # Hz
 
-# Resolução vertical do escalograma (compatível com CNNs como ResNet, VGG, etc.)
-IMG_HEIGHT = 224    # pixels
-IMG_WIDTH = 224     # pixels
+# Resolução espacial do escalograma (compatível com CNNs como ResNet, VGG, etc.)
+IMG_HEIGHT = 224    # pixels (altura/frequências)
+IMG_WIDTH = 224     # pixels (largura/tempo)
+
+# ==============================================================================
+# 4. Hiperparâmetros do Modelo e Treinamento da CNN
+# ==============================================================================
+BATCH_SIZE = 32
+LEARNING_RATE = 0.001
+NUM_EPOCHS = 10
+DROPOUT_RATE = 0.5
 
 # Seed para reprodutibilidade dos experimentos
 RANDOM_SEED = 42
