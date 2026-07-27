@@ -35,6 +35,12 @@ def get_data_loaders(batch_size: int = BATCH_SIZE) -> Tuple[DataLoader, DataLoad
     """
     Carrega os datasets de escalogramas CWT salvos em data/processed/ (train, val, test)
     e retorna os DataLoaders correspondentes.
+
+    Args:
+        batch_size (int): Tamanho do lote (padrão definido em config.py).
+
+    Returns:
+        Tuple contendo (train_loader, val_loader, test_loader, classes).
     """
     transform = transforms.Compose([
         transforms.Resize((IMG_HEIGHT, IMG_WIDTH)),
@@ -53,9 +59,14 @@ def get_data_loaders(batch_size: int = BATCH_SIZE) -> Tuple[DataLoader, DataLoad
     val_dataset = ImageFolder(root=str(val_dir), transform=transform)
     test_dataset = ImageFolder(root=str(test_dir), transform=transform)
 
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
+    use_pin_memory = torch.cuda.is_available()
+
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True,
+                              num_workers=2, pin_memory=use_pin_memory)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False,
+                            num_workers=2, pin_memory=use_pin_memory)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False,
+                             num_workers=2, pin_memory=use_pin_memory)
 
     return train_loader, val_loader, test_loader, train_dataset.classes
 
@@ -115,7 +126,16 @@ def train_and_evaluate_bearing_cnn(
     lr: float = LEARNING_RATE
 ) -> Dict[str, Any]:
     """
-    Treina e avalia a arquitetura BearingCNN personalizada com checkpointing no estado ótimo.
+    Treina e avalia a arquitetura BearingCNN personalizada com checkpointing
+    automático no estado ótimo (menor val_loss).
+
+    Args:
+        num_epochs (int): Número de épocas de treinamento.
+        lr (float): Taxa de aprendizado do otimizador Adam.
+
+    Returns:
+        Dict contendo: model_name, history (train/val loss e acc),
+        best_val_acc, test_acc, test_preds, test_labels, classes.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader, val_loader, test_loader, classes = get_data_loaders(BATCH_SIZE)
@@ -127,7 +147,7 @@ def train_and_evaluate_bearing_cnn(
     best_val_loss = float("inf")
     checkpoint_path = Path("checkpoint_bearing_cnn_best.pth")
     
-    historico = {
+    history = {
         "train_loss": [],
         "val_loss": [],
         "train_acc": [],
@@ -175,10 +195,10 @@ def train_and_evaluate_bearing_cnn(
         epoch_val_loss = val_loss / val_total
         epoch_val_acc = (val_correct / val_total) * 100.0
         
-        historico["train_loss"].append(epoch_train_loss)
-        historico["val_loss"].append(epoch_val_loss)
-        historico["train_acc"].append(epoch_train_acc)
-        historico["val_acc"].append(epoch_val_acc)
+        history["train_loss"].append(epoch_train_loss)
+        history["val_loss"].append(epoch_val_loss)
+        history["train_acc"].append(epoch_train_acc)
+        history["val_acc"].append(epoch_val_acc)
         
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
@@ -192,7 +212,7 @@ def train_and_evaluate_bearing_cnn(
               f"Val Loss: {epoch_val_loss:.4f} - Acc: {epoch_val_acc:.2f}% {status_msg}")
         
     print(f"\n[INFO] Carregando pesos do melhor modelo salvo ({checkpoint_path})...")
-    model.load_state_dict(torch.load(checkpoint_path))
+    model.load_state_dict(torch.load(checkpoint_path, weights_only=True))
     model.eval()
     
     test_preds, test_labels = [], []
@@ -212,8 +232,8 @@ def train_and_evaluate_bearing_cnn(
     
     return {
         "model_name": "bearing_cnn",
-        "historico": historico,
-        "best_val_acc": max(historico["val_acc"]),
+        "history": history,
+        "best_val_acc": max(history["val_acc"]),
         "test_acc": test_acc,
         "test_preds": test_preds,
         "test_labels": test_labels,
