@@ -1,14 +1,31 @@
 # Ambiente virtual
 venv/
-# Dados (pesados demais pro GitHub)
+.venv/
+
+# Dados brutos e imagens geradas (pesados para o GitHub)
 data/
+
+# Pesos e checkpoints de modelos PyTorch (.pth, .pt)
+*.pth
+*.pt
+checkpoint_*.pth
+
 # Cache do Python
 __pycache__/
-*.pyc
-# Checkpoints de Jupyter
+*.py[cod]
+*$py.class
+
+# Checkpoints de Jupyter Notebooks
 .ipynb_checkpoints/
-# Arquivos do sistema
+
+# Configurações de IDEs e editores
+.vscode/
+.idea/
+
+# Arquivos temporários de sistema
 .DS_Store
 Thumbs.db
+*.tmp
 
+# Documentos temporários de guia
 setup_guide.md
