@@ -93,15 +93,14 @@ flowchart LR
 
 ## Resultados
 
-Resultados obtidos nos testes em 1.776 amostras inéditas do conjunto de teste:
+Resultados obtidos nos testes em 1.776 amostras inéditas do conjunto de teste (com checkpointing automático pelo menor `val_loss`):
 
 | Modelo | Estratégia | Acurácia (teste) | F1-score | Parâmetros treináveis |
 |---|---|:---:|:---:|:---:|
-| **BearingCNN (Própria)** | Treino do zero | **99.89%** | **0.9989** | ~1.2M |
-| **ResNet18** | Feature extraction (`Freeze=True`) | **99.49%** | **0.9949** | ~0.5M |
+| **BearingCNN (Própria)** | Treino do zero | **100.00%** | **1.0000** | ~1.2M |
 | **ResNet18** | Fine-tuning (`Freeze=False`) | **100.00%** | **1.0000** | ~11.1M |
-| **Inception-v3** | Feature extraction (`Freeze=True`) | **99.21%** | **0.9920** | ~4.1M |
-| **EfficientNet-B0** | Feature extraction (`Freeze=True`) | **99.50%** | **0.9950** | ~1.3M |
+| **Inception-v3** | Fine-tuning (`Freeze=False`) | **100.00%** | **1.0000** | ~23.8M |
+| **EfficientNet-B0** | Fine-tuning (`Freeze=False`) | **100.00%** | **1.0000** | ~5.3M |
 
 <p align="center">
   <b>Curvas de Aprendizado (Perda e Acurácia - ResNet18)</b><br>
