@@ -32,6 +32,13 @@ from src.config import (
 def get_transfer_dataloaders(img_size: int = 224, batch_size: int = BATCH_SIZE) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
     Retorna DataLoaders com o tamanho de imagem específico do modelo (224x224 ou 299x299).
+
+    Args:
+        img_size (int): Dimensão espacial de entrada da rede (224 ou 299).
+        batch_size (int): Tamanho do lote.
+
+    Returns:
+        Tuple contendo (train_loader, val_loader, test_loader, classes).
     """
     transform = transforms.Compose([
         transforms.Resize((img_size, img_size)),
@@ -49,10 +56,15 @@ def get_transfer_dataloaders(img_size: int = 224, batch_size: int = BATCH_SIZE) 
     train_ds = ImageFolder(root=str(train_dir), transform=transform)
     val_ds = ImageFolder(root=str(val_dir), transform=transform)
     test_ds = ImageFolder(root=str(test_dir), transform=transform)
-    
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+    use_pin_memory = torch.cuda.is_available()
+
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                              num_workers=2, pin_memory=use_pin_memory)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
+                            num_workers=2, pin_memory=use_pin_memory)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False,
+                             num_workers=2, pin_memory=use_pin_memory)
     
     return train_loader, val_loader, test_loader, train_ds.classes
 
@@ -60,6 +72,14 @@ def get_transfer_dataloaders(img_size: int = 224, batch_size: int = BATCH_SIZE) 
 def build_transfer_model(model_name: str, num_classes: int = NUM_CLASSES, freeze_backbone: bool = True) -> Tuple[nn.Module, int]:
     """
     Constrói e adapta modelos pré-treinados no ImageNet para a classificação do CWRU.
+
+    Args:
+        model_name (str): Nome do modelo ('resnet18', 'inception_v3', 'efficientnet_b0').
+        num_classes (int): Número de classes de saída.
+        freeze_backbone (bool): Se True, congela os pesos do backbone pré-treinado.
+
+    Returns:
+        Tuple contendo (model, img_size) — modelo adaptado e tamanho de entrada.
     """
     model_name = model_name.lower()
     
@@ -104,7 +124,18 @@ def train_and_evaluate_transfer_model(
     freeze: bool = True
 ) -> Dict[str, Any]:
     """
-    Treina e avalia modelos de Transfer Learning com checkpointing automático no estado ótimo.
+    Treina e avalia modelos de Transfer Learning com checkpointing automático
+    no estado ótimo (menor val_loss).
+
+    Args:
+        model_name (str): Nome do modelo ('resnet18', 'inception_v3', 'efficientnet_b0').
+        num_epochs (int): Número de épocas de treinamento.
+        lr (float): Taxa de aprendizado do otimizador Adam.
+        freeze (bool): Se True, congela o backbone (feature extraction).
+
+    Returns:
+        Dict contendo: model_name, history (train/val loss e acc),
+        best_val_acc, test_acc, test_preds, test_labels, classes.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, img_size = build_transfer_model(model_name, num_classes=4, freeze_backbone=freeze)
@@ -118,7 +149,7 @@ def train_and_evaluate_transfer_model(
     best_val_loss = float("inf")
     checkpoint_path = Path(f"checkpoint_{model_name}_best.pth")
     
-    historico = {
+    history = {
         "train_loss": [],
         "val_loss": [],
         "train_acc": [],
@@ -166,10 +197,10 @@ def train_and_evaluate_transfer_model(
         epoch_val_loss = val_loss / val_total
         epoch_val_acc = (val_correct / val_total) * 100.0
         
-        historico["train_loss"].append(epoch_train_loss)
-        historico["val_loss"].append(epoch_val_loss)
-        historico["train_acc"].append(epoch_train_acc)
-        historico["val_acc"].append(epoch_val_acc)
+        history["train_loss"].append(epoch_train_loss)
+        history["val_loss"].append(epoch_val_loss)
+        history["train_acc"].append(epoch_train_acc)
+        history["val_acc"].append(epoch_val_acc)
         
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
@@ -183,7 +214,7 @@ def train_and_evaluate_transfer_model(
               f"Val Loss: {epoch_val_loss:.4f} - Acc: {epoch_val_acc:.2f}% {status_msg}")
         
     print(f"\n[INFO] Carregando pesos do melhor modelo salvo ({checkpoint_path})...")
-    model.load_state_dict(torch.load(checkpoint_path))
+    model.load_state_dict(torch.load(checkpoint_path, weights_only=True))
     model.eval()
     
     test_preds, test_labels = [], []
@@ -203,8 +234,8 @@ def train_and_evaluate_transfer_model(
     
     return {
         "model_name": model_name,
-        "historico": historico,
-        "best_val_acc": max(historico["val_acc"]),
+        "history": history,
+        "best_val_acc": max(history["val_acc"]),
         "test_acc": test_acc,
         "test_preds": test_preds,
         "test_labels": test_labels,
