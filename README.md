@@ -104,8 +104,13 @@ Resultados obtidos nos testes em 1.776 amostras inéditas do conjunto de teste:
 | **EfficientNet-B0** | Feature extraction (`Freeze=True`) | **99.50%** | **0.9950** | ~1.3M |
 
 <p align="center">
-  <img src="docs/images/confusion_matrix_resnet.png" width="420" alt="Matriz de confusão do melhor modelo">
-  <img src="docs/images/training_curves_resnet.png" width="420" alt="Curvas de treino e validação">
+  <b>Curvas de Aprendizado (Perda e Acurácia - ResNet18)</b><br>
+  <img src="docs/images/training_curves_resnet.png" width="750" alt="Curvas de Aprendizado - ResNet18">
+</p>
+
+<p align="center">
+  <b>Matriz de Confusão no Teste Inédito (100% de Acurácia)</b><br>
+  <img src="docs/images/confusion_matrix_resnet.png" width="480" alt="Matriz de Confusão - ResNet18">
 </p>
 
 ---
