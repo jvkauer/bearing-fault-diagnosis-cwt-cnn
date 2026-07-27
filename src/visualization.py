@@ -1,74 +1,82 @@
 """
-Módulo de Visualização de Sinais e Escalogramas.
-Gera figuras no formato da Monografia de TCC (Figura 5):
-  (a) Sinal Bruto no Tempo
-  (b) Escalograma CWT (Morlet Complexa)
+Adicionar este bloco ao final de src/visualization.py.
+Substitui o código de plot duplicado nos 4 lugares (cwru_treinamento_cnn.ipynb
+e as 3 chamadas em cwru_transfer_learning.ipynb).
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pywt
-from src.config import FS, WAVELET, FREQ_MIN, FREQ_MAX, IMG_HEIGHT
-from src.cwt_processor import compute_cwt, get_scales
+from matplotlib.ticker import MaxNLocator
 
 
-def plot_monograph_figure(
-    signal_window: np.ndarray,
-    title: str = "Diagnóstico de Falha em Rolamento",
+def plot_training_curves(
+    historico: dict,
+    model_name: str,
     save_path: str = None
 ):
     """
-    Gera e exibe o gráfico no padrão da Figura 5 da Monografia:
-    - Painel (a): Sinal Bruto (Tempo em segundos vs Amplitude em g)
-    - Painel (b): Escalograma CWT (Tempo em segundos vs Frequência em Hz)
+    Plota as curvas de aprendizado (Perda e Acurácia) de treino/validação,
+    destacando a época do checkpoint (menor val_loss) salvo durante o treino.
 
     Args:
-        signal_window (np.ndarray): Janela do sinal de vibração (1D).
-        title (str): Título principal do gráfico.
-        save_path (str, optional): Caminho para salvar a figura em PNG/PDF.
+        historico (dict): dicionário com listas 'train_loss', 'val_loss',
+                           'train_acc', 'val_acc' (retornado pelas funções
+                           de treino em cnn_processor.py / transfer_learning.py).
+        model_name (str): nome do modelo, usado nos títulos (ex: "ResNet18").
+        save_path (str, optional): caminho para salvar a figura em PNG.
     """
-    vetor_tempo = np.arange(len(signal_window)) / FS
-    freqs_desejadas = np.linspace(FREQ_MIN, FREQ_MAX, IMG_HEIGHT)
-    
-    # Calcular magnitude da CWT
-    scalogram_mat = compute_cwt(signal_window)
-    
-    fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-    
-    # --------------------------------------------------------------------------
-    # Subplot (a): Sinal no Tempo
-    # --------------------------------------------------------------------------
-    axs[0].plot(vetor_tempo, signal_window, color="#3182bd", linewidth=0.8)
-    axs[0].set_title("(a) Sinal Bruto", fontsize=11, fontweight="bold")
-    axs[0].set_ylabel("Amplitude (g)", fontsize=10)
+    epocas_eixo = range(1, len(historico["train_loss"]) + 1)
+
+    # Época do checkpoint = menor val_loss (mesmo critério usado no treino)
+    best_epoch = int(np.argmin(historico["val_loss"])) + 1
+    best_val_loss = min(historico["val_loss"])
+    best_val_acc = historico["val_acc"][best_epoch - 1]
+
+    fig, axs = plt.subplots(1, 2, figsize=(14, 5))
+
+    # --------------------------------------------------------------------
+    # Painel (a): Curva de Perda
+    # --------------------------------------------------------------------
+    axs[0].plot(epocas_eixo, historico["train_loss"],
+                label=f"Treino (final: {historico['train_loss'][-1]:.4f})",
+                marker="o", color="#3182bd", linewidth=1.8)
+    axs[0].plot(epocas_eixo, historico["val_loss"],
+                label=f"Validação (final: {historico['val_loss'][-1]:.4f})",
+                marker="s", color="#e6550d", linewidth=1.8)
+    axs[0].axvline(best_epoch, color="gray", linestyle="--", alpha=0.6, linewidth=1)
+    axs[0].scatter([best_epoch], [best_val_loss], color="#2ca02c", s=90, zorder=5,
+                   marker="*", label=f"Checkpoint (época {best_epoch})")
+    axs[0].set_title(f"Curva de Perda (Loss) — {model_name}", fontsize=12, fontweight="bold")
+    axs[0].set_xlabel("Época")
+    axs[0].set_ylabel("Cross-Entropy Loss")
+    axs[0].xaxis.set_major_locator(MaxNLocator(integer=True))
+    axs[0].legend(fontsize=9, loc="best")
     axs[0].grid(True, linestyle="--", alpha=0.5)
-    
-    # --------------------------------------------------------------------------
-    # Subplot (b): Escalograma CWT (suave para visualização na monografia)
-    # --------------------------------------------------------------------------
-    pcm = axs[1].imshow(
-        scalogram_mat,
-        extent=[vetor_tempo[0], vetor_tempo[-1], freqs_desejadas[0], freqs_desejadas[-1]],
-        cmap="jet",
-        aspect="auto",
-        origin="lower",
-        interpolation="bilinear"  # Suavização apenas para visualização humana
-    )
-    
-    axs[1].set_title("(b) Scalogram CWT (Morlet Complexa)", fontsize=11, fontweight="bold")
-    axs[1].set_xlabel("Tempo (s)", fontsize=10)
-    axs[1].set_ylabel("Frequência (Hz)", fontsize=10)
-    
-    # Colorbar
-    fig.colorbar(pcm, ax=axs[1], label="Magnitude |C(a,b)|")
-    
-    if title:
-        fig.suptitle(title, fontsize=13, fontweight="bold", y=0.98)
-        
+
+    # --------------------------------------------------------------------
+    # Painel (b): Curva de Acurácia
+    # --------------------------------------------------------------------
+    axs[1].plot(epocas_eixo, historico["train_acc"],
+                label=f"Treino (final: {historico['train_acc'][-1]:.2f}%)",
+                marker="o", color="#3182bd", linewidth=1.8)
+    axs[1].plot(epocas_eixo, historico["val_acc"],
+                label=f"Validação (final: {historico['val_acc'][-1]:.2f}%)",
+                marker="s", color="#e6550d", linewidth=1.8)
+    axs[1].axvline(best_epoch, color="gray", linestyle="--", alpha=0.6, linewidth=1)
+    axs[1].scatter([best_epoch], [best_val_acc], color="#2ca02c", s=90, zorder=5,
+                   marker="*", label=f"Checkpoint (época {best_epoch})")
+    axs[1].set_title(f"Curva de Acurácia (%) — {model_name}", fontsize=12, fontweight="bold")
+    axs[1].set_xlabel("Época")
+    axs[1].set_ylabel("Acurácia (%)")
+    axs[1].xaxis.set_major_locator(MaxNLocator(integer=True))
+    axs[1].legend(fontsize=9, loc="best")
+    axs[1].grid(True, linestyle="--", alpha=0.5)
+
+    fig.suptitle(f"Curvas de Aprendizado — {model_name}", fontsize=13, fontweight="bold", y=1.02)
     plt.tight_layout()
-    
+
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Figura salva com sucesso em: {save_path}")
-        
+
     plt.show()
