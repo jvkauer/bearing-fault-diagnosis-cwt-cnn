@@ -212,7 +212,6 @@ Projeto fundamentado em literatura consolidada de processamento de sinais e apre
 - [x] Transfer Learning (`ResNet18`, `Inception-v3`, `EfficientNet-B0` - **100.00%** de acurácia no teste)
 - [x] Comparação sistemática de resultados entre arquiteturas
 - [ ] Validação em banco de dados de falhas reais (NASA IMS / Paderborn - TCC 2)
-- [ ] Escrita final do capítulo de Resultados e Conclusão
 
 ---
 
