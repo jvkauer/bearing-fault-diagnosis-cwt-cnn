@@ -1,7 +1,6 @@
 """
-Adicionar este bloco ao final de src/visualization.py.
-Substitui o código de plot duplicado nos 4 lugares (cwru_treinamento_cnn.ipynb
-e as 3 chamadas em cwru_transfer_learning.ipynb).
+Módulo de Visualização — Curvas de Aprendizado (Loss e Acurácia).
+Gera gráficos padronizados de treino/validação com destaque no checkpoint ótimo.
 """
 
 import numpy as np
@@ -10,7 +9,7 @@ from matplotlib.ticker import MaxNLocator
 
 
 def plot_training_curves(
-    historico: dict,
+    history: dict,
     model_name: str,
     save_path: str = None
 ):
@@ -19,29 +18,29 @@ def plot_training_curves(
     destacando a época do checkpoint (menor val_loss) salvo durante o treino.
 
     Args:
-        historico (dict): dicionário com listas 'train_loss', 'val_loss',
-                           'train_acc', 'val_acc' (retornado pelas funções
-                           de treino em cnn_processor.py / transfer_learning.py).
-        model_name (str): nome do modelo, usado nos títulos (ex: "ResNet18").
-        save_path (str, optional): caminho para salvar a figura em PNG.
+        history (dict): Dicionário com listas 'train_loss', 'val_loss',
+                        'train_acc', 'val_acc' (retornado pelas funções
+                        de treino em cnn_processor.py / transfer_learning.py).
+        model_name (str): Nome do modelo, usado nos títulos (ex: "ResNet18").
+        save_path (str, optional): Caminho para salvar a figura em PNG.
     """
-    epocas_eixo = range(1, len(historico["train_loss"]) + 1)
+    epochs_axis = range(1, len(history["train_loss"]) + 1)
 
     # Época do checkpoint = menor val_loss (mesmo critério usado no treino)
-    best_epoch = int(np.argmin(historico["val_loss"])) + 1
-    best_val_loss = min(historico["val_loss"])
-    best_val_acc = historico["val_acc"][best_epoch - 1]
+    best_epoch = int(np.argmin(history["val_loss"])) + 1
+    best_val_loss = min(history["val_loss"])
+    best_val_acc = history["val_acc"][best_epoch - 1]
 
     fig, axs = plt.subplots(1, 2, figsize=(14, 5))
 
     # --------------------------------------------------------------------
     # Painel (a): Curva de Perda
     # --------------------------------------------------------------------
-    axs[0].plot(epocas_eixo, historico["train_loss"],
-                label=f"Treino (final: {historico['train_loss'][-1]:.4f})",
+    axs[0].plot(epochs_axis, history["train_loss"],
+                label=f"Treino (final: {history['train_loss'][-1]:.4f})",
                 marker="o", color="#3182bd", linewidth=1.8)
-    axs[0].plot(epocas_eixo, historico["val_loss"],
-                label=f"Validação (final: {historico['val_loss'][-1]:.4f})",
+    axs[0].plot(epochs_axis, history["val_loss"],
+                label=f"Validação (final: {history['val_loss'][-1]:.4f})",
                 marker="s", color="#e6550d", linewidth=1.8)
     axs[0].axvline(best_epoch, color="gray", linestyle="--", alpha=0.6, linewidth=1)
     axs[0].scatter([best_epoch], [best_val_loss], color="#2ca02c", s=90, zorder=5,
@@ -56,11 +55,11 @@ def plot_training_curves(
     # --------------------------------------------------------------------
     # Painel (b): Curva de Acurácia
     # --------------------------------------------------------------------
-    axs[1].plot(epocas_eixo, historico["train_acc"],
-                label=f"Treino (final: {historico['train_acc'][-1]:.2f}%)",
+    axs[1].plot(epochs_axis, history["train_acc"],
+                label=f"Treino (final: {history['train_acc'][-1]:.2f}%)",
                 marker="o", color="#3182bd", linewidth=1.8)
-    axs[1].plot(epocas_eixo, historico["val_acc"],
-                label=f"Validação (final: {historico['val_acc'][-1]:.2f}%)",
+    axs[1].plot(epochs_axis, history["val_acc"],
+                label=f"Validação (final: {history['val_acc'][-1]:.2f}%)",
                 marker="s", color="#e6550d", linewidth=1.8)
     axs[1].axvline(best_epoch, color="gray", linestyle="--", alpha=0.6, linewidth=1)
     axs[1].scatter([best_epoch], [best_val_acc], color="#2ca02c", s=90, zorder=5,
@@ -77,6 +76,6 @@ def plot_training_curves(
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
-        print(f"Figura salva com sucesso em: {save_path}")
+        print(f"[INFO] Figura salva em: {save_path}")
 
     plt.show()
