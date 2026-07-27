@@ -200,7 +200,7 @@ Todos os modelos são inicializados com pesos pré-treinados no ImageNet e adapt
 
 ## Base teórica
 
-Projeto fundamentado em literatura consolidada de processamento de sinais e aprendizado profundo, incluindo os trabalhos de Boudiaf et al. (2016), Guo et al. (2018), Wang et al. (2019) e Kaya, Kuncan & Ertunç (2022) — que reportam acurácias de até 99–100% combinando CWT com transfer learning. Os fundamentos matemáticos completos (FFT, STFT, CWT, arquiteturas de CNN) estão documentados no [(ainda não disponível)](docs/TCC.pdf).
+Projeto fundamentado em literatura consolidada de processamento de sinais e aprendizado profundo, incluindo os trabalhos de Boudiaf et al. (2016), Guo et al. (2018), Wang et al. (2019) e Kaya, Kuncan & Ertunç (2022) — que reportam acurácias de até 99–100% combinando CWT com transfer learning. Os fundamentos matemáticos completos (FFT, STFT, CWT, arquiteturas de CNN) estão documentados no [Relatório Técnico (TCC)](docs/TCC.pdf).
 
 ---
 
