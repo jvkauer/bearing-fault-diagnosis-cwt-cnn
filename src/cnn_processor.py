@@ -1,12 +1,12 @@
 """
-Módulo de processamento e treinamento da CNN (Rede Neural Convolucional)
+Módulo de processamento e treinamento da CNN personalizada (BearingCNN)
 para classificação dos escalogramas CWT (Diagnóstico de Falhas em Rolamentos).
 """
 
 import sys
 from pathlib import Path
+from typing import Dict, Any, Tuple, List
 
-# Garantir importação do módulo src
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
@@ -17,8 +17,8 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
+import numpy as np
 
-# Importar todas as configurações centralizadas de src/config.py
 from src.config import (
     PROCESSED_DATA_DIR,
     BATCH_SIZE,
@@ -31,7 +31,7 @@ from src.config import (
 )
 
 
-def get_data_loaders(batch_size: int = BATCH_SIZE):
+def get_data_loaders(batch_size: int = BATCH_SIZE) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
     Carrega os datasets de escalogramas CWT salvos em data/processed/ (train, val, test)
     e retorna os DataLoaders correspondentes.
@@ -110,18 +110,115 @@ class BearingCNN(nn.Module):
         return x
 
 
-# Alias de compatibilidade
-Net = BearingCNN
-
-
-if __name__ == "__main__":
+def train_and_evaluate_bearing_cnn(
+    num_epochs: int = NUM_EPOCHS,
+    lr: float = LEARNING_RATE
+) -> Dict[str, Any]:
+    """
+    Treina e avalia a arquitetura BearingCNN personalizada com checkpointing no estado ótimo.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Utilizando dispositivo: {device}")
-
     train_loader, val_loader, test_loader, classes = get_data_loaders(BATCH_SIZE)
-    print(f"Classes identificadas: {classes}")
-    print(f"Lotes de treino: {len(train_loader)}, Validação: {len(val_loader)}, Teste: {len(test_loader)}")
-
+    
     model = BearingCNN(num_classes=len(classes)).to(device)
-    print("\nEstrutura do Modelo:")
-    print(model)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    
+    best_val_loss = float("inf")
+    checkpoint_path = Path("checkpoint_bearing_cnn_best.pth")
+    
+    historico = {
+        "train_loss": [],
+        "val_loss": [],
+        "train_acc": [],
+        "val_acc": []
+    }
+    
+    print("=" * 80)
+    print(f"[INFO] EXPERIMENTO BEARING CNN (PRÓPRIA) | Épocas={num_epochs} | LR={lr}")
+    print("=" * 80)
+    
+    for epoch in range(1, num_epochs + 1):
+        # Treinamento
+        model.train()
+        train_loss, train_correct, train_total = 0.0, 0, 0
+        for imgs, labels in train_loader:
+            imgs, labels = imgs.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = model(imgs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            
+            train_loss += loss.item() * imgs.size(0)
+            _, preds = torch.max(outputs, 1)
+            train_total += labels.size(0)
+            train_correct += (preds == labels).sum().item()
+            
+        epoch_train_loss = train_loss / train_total
+        epoch_train_acc = (train_correct / train_total) * 100.0
+        
+        # Validação
+        model.eval()
+        val_loss, val_correct, val_total = 0.0, 0, 0
+        with torch.no_grad():
+            for imgs, labels in val_loader:
+                imgs, labels = imgs.to(device), labels.to(device)
+                outputs = model(imgs)
+                loss = criterion(outputs, labels)
+                
+                val_loss += loss.item() * imgs.size(0)
+                _, preds = torch.max(outputs, 1)
+                val_total += labels.size(0)
+                val_correct += (preds == labels).sum().item()
+                
+        epoch_val_loss = val_loss / val_total
+        epoch_val_acc = (val_correct / val_total) * 100.0
+        
+        historico["train_loss"].append(epoch_train_loss)
+        historico["val_loss"].append(epoch_val_loss)
+        historico["train_acc"].append(epoch_train_acc)
+        historico["val_acc"].append(epoch_val_acc)
+        
+        if epoch_val_loss < best_val_loss:
+            best_val_loss = epoch_val_loss
+            torch.save(model.state_dict(), checkpoint_path)
+            status_msg = f"[CHECKPOINT] Modelo ótimo salvo na época {epoch:02d}/{num_epochs:02d}."
+        else:
+            status_msg = ""
+            
+        print(f"Época [{epoch:02d}/{num_epochs:02d}] | "
+              f"Treino Loss: {epoch_train_loss:.4f} - Acc: {epoch_train_acc:.2f}% | "
+              f"Val Loss: {epoch_val_loss:.4f} - Acc: {epoch_val_acc:.2f}% {status_msg}")
+        
+    print(f"\n[INFO] Carregando pesos do melhor modelo salvo ({checkpoint_path})...")
+    model.load_state_dict(torch.load(checkpoint_path))
+    model.eval()
+    
+    test_preds, test_labels = [], []
+    with torch.no_grad():
+        for imgs, labels in test_loader:
+            imgs = imgs.to(device)
+            outputs = model(imgs)
+            _, preds = torch.max(outputs, 1)
+            test_preds.extend(preds.cpu().numpy())
+            test_labels.extend(labels.numpy())
+            
+    test_preds = np.array(test_preds)
+    test_labels = np.array(test_labels)
+    test_acc = (test_preds == test_labels).mean() * 100.0
+    
+    print(f"[RESULTADO FINAL] Acurácia no Teste (BEARING CNN): {test_acc:.2f}%\n")
+    
+    return {
+        "model_name": "bearing_cnn",
+        "historico": historico,
+        "best_val_acc": max(historico["val_acc"]),
+        "test_acc": test_acc,
+        "test_preds": test_preds,
+        "test_labels": test_labels,
+        "classes": classes
+    }
+
+
+Net = BearingCNN
