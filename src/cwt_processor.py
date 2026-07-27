@@ -14,13 +14,13 @@ def get_scales():
     """
     Gera as escalas da wavelet correspondentes às frequências linearmente espaçadas
     entre FREQ_MIN e FREQ_MAX.
-    
+
     Returns:
-        tuple: (escalas, frequencias_desejadas)
+        tuple: (scales, target_freqs) — Escalas da wavelet e frequências alvo em Hz.
     """
-    freqs_desejadas = np.linspace(FREQ_MIN, FREQ_MAX, IMG_HEIGHT)
-    escalas = pywt.frequency2scale(WAVELET, freqs_desejadas / FS)
-    return escalas, freqs_desejadas
+    target_freqs = np.linspace(FREQ_MIN, FREQ_MAX, IMG_HEIGHT)
+    scales = pywt.frequency2scale(WAVELET, target_freqs / FS)
+    return scales, target_freqs
 
 
 def compute_cwt(signal_window: np.ndarray) -> np.ndarray:
@@ -33,10 +33,10 @@ def compute_cwt(signal_window: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: Matriz 2D de magnitude do escalograma (shape: IMG_HEIGHT, len(signal_window)).
     """
-    escalas, _ = get_scales()
+    scales, _ = get_scales()
     coefs_cwt, _ = pywt.cwt(
         signal_window,
-        escalas,
+        scales,
         WAVELET,
         sampling_period=1.0 / FS,
         method="conv"
