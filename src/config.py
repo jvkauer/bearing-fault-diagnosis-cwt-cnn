@@ -6,7 +6,7 @@ Projeto de Engenharia de Computação - Diagnóstico de Falhas em Rolamentos.
 from pathlib import Path
 
 # ==============================================================================
-# 1. Diretores e Caminhos do Projeto
+# 1. Diretórios e Caminhos do Projeto
 # ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
