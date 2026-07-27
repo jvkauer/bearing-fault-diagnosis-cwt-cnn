@@ -104,8 +104,8 @@ Resultados obtidos nos testes em 1.776 amostras inéditas do conjunto de teste:
 | **EfficientNet-B0** | Feature extraction (`Freeze=True`) | **99.50%** | **0.9950** | ~1.3M |
 
 <p align="center">
-  <img src="docs/images/confusion_matrix.png" width="420" alt="Matriz de confusão do melhor modelo">
-  <img src="docs/images/training_curves.png" width="420" alt="Curvas de treino e validação">
+  <img src="docs/images/confusion_matrix_resnet.png" width="420" alt="Matriz de confusão do melhor modelo">
+  <img src="docs/images/training_curves_resnet.png" width="420" alt="Curvas de treino e validação">
 </p>
 
 ---
@@ -208,7 +208,7 @@ Projeto fundamentado em literatura consolidada de processamento de sinais e apre
 - [x] Transfer Learning (`ResNet18`, `Inception-v3`, `EfficientNet-B0` - 100.00%)
 - [x] Comparação sistemática de resultados entre arquiteturas
 - [ ] Validação em banco de dados de falhas reais (NASA IMS / Paderborn - TCC 2)
-- [ ] Escrita final do capítulo de Resultados e Conclusão
+
 
 ---
 
@@ -216,8 +216,6 @@ Projeto fundamentado em literatura consolidada de processamento de sinais e apre
 
 **João Vitor Kauer Schuck**  
 Engenharia de Computação — Universidade Federal de Pelotas (UFPel)  
-Orientador: Prof. Dr. Alan Carlos Junior Rossetto  
-
 [GitHub: jvkauer](https://github.com/jvkauer)
 
 ---
