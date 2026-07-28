@@ -9,7 +9,7 @@ from matplotlib.ticker import MaxNLocator
 
 from src.config import FS, FREQ_MIN, FREQ_MAX, IMG_HEIGHT
 from src.cwt_processor import compute_cwt
-
+from sklearn.metrics import confusion_matrix
 
 def plot_monograph_figure(
     signal_window: np.ndarray,
@@ -143,4 +143,32 @@ def plot_training_curves(
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"[INFO] Figura salva em: {save_path}")
 
+    plt.show()
+
+    
+def plot_confusion_matrix(
+    res: dict,
+    model_name :str,
+):
+    """
+    Plota a matriz de confusão dos dados inéditos
+    Args:
+        res (dict):  res (dict): Dicionário contendo 'test_labels', 'test_preds' e 'classes'.
+        model_name (str): Nome do modelo, usado nos títulos (ex: "ResNet18").
+    """
+    cm = confusion_matrix(res['test_labels'], res['test_preds'])
+    fig, ax = plt.subplots(figsize=(6, 5))
+    im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    ax.figure.colorbar(im, ax=ax)
+    ax.set(xticks=np.arange(cm.shape[1]), yticks=np.arange(cm.shape[0]),
+        xticklabels=res['classes'], yticklabels=res['classes'],
+        title=f'Matriz de Confusão — {model_name}',
+        ylabel='Classe Real', xlabel='Classe Predita')
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    threshold = cm.max() / 2.0
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], 'd'), ha='center', va='center',
+                    color='white' if cm[i, j] > threshold else 'black')
+    plt.tight_layout()
     plt.show()
