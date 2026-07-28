@@ -7,7 +7,6 @@ Transformada Wavelet Contínua e Redes Neurais Convolucionais aplicadas ao diagn
 [![Dataset](https://img.shields.io/badge/Dataset-CWRU-blue)](https://engineering.case.edu/bearingdatacenter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Trabalho de Conclusão de Curso — Engenharia de Computação, Universidade Federal de Pelotas (UFPel).
 
 ---
 
