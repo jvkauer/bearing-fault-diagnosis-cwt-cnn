@@ -48,7 +48,7 @@ IMG_WIDTH = 224     # pixels (largura/tempo)
 # ==============================================================================
 BATCH_SIZE = 32
 LEARNING_RATE = 0.0005
-NUM_EPOCHS = 10
+NUM_EPOCHS = 15
 DROPOUT_RATE = 0.5
 
 # Seed para reprodutibilidade dos experimentos
