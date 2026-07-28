@@ -148,13 +148,16 @@ def plot_training_curves(
     
 def plot_confusion_matrix(
     res: dict,
-    model_name :str,
+    model_name: str,
+    save_path: str = None
 ):
     """
-    Plota a matriz de confusão dos dados inéditos
+    Plota e exibe a Matriz de Confusão para as predições no conjunto de teste.
+
     Args:
-        res (dict):  res (dict): Dicionário contendo 'test_labels', 'test_preds' e 'classes'.
-        model_name (str): Nome do modelo, usado nos títulos (ex: "ResNet18").
+        res (dict): Dicionário contendo 'test_labels', 'test_preds' e 'classes'.
+        model_name (str): Nome do modelo para o título (ex: "ResNet-18").
+        save_path (str, optional): Caminho para salvar a figura em PNG.
     """
     cm = confusion_matrix(res['test_labels'], res['test_preds'])
     fig, ax = plt.subplots(figsize=(6, 5))
@@ -171,4 +174,9 @@ def plot_confusion_matrix(
             ax.text(j, i, format(cm[i, j], 'd'), ha='center', va='center',
                     color='white' if cm[i, j] > threshold else 'black')
     plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"[INFO] Figura salva em: {save_path}")
+        
     plt.show()
