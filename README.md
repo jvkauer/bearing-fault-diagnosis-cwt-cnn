@@ -92,23 +92,21 @@ flowchart LR
 
 ## Resultados
 
-Resultados obtidos nos testes em 1.776 amostras inéditas do conjunto de teste (com checkpointing automático pelo menor `val_loss`):
+Resultados obtidos nos testes em 2.368 amostras inéditas do conjunto de teste, com **divisão estrita por arquivos `.mat`** (prevenindo *Data Leakage* por sobreposição de janelas) e checkpointing automático pelo menor `val_loss`:
 
-| Modelo | Estratégia | Acurácia (teste) | F1-score | Parâmetros treináveis |
-|---|---|:---:|:---:|:---:|
-| **BearingCNN (Própria)** | Treino do zero | **100.00%** | **1.0000** | ~1.2M |
-| **ResNet18** | Fine-tuning (`Freeze=False`) | **100.00%** | **1.0000** | ~11.1M |
-| **Inception-v3** | Fine-tuning (`Freeze=False`) | **100.00%** | **1.0000** | ~23.8M |
-| **EfficientNet-B0** | Fine-tuning (`Freeze=False`) | **100.00%** | **1.0000** | ~5.3M |
+| Modelo | Estratégia | Acurácia (teste) | Parâmetros |
+|---|---|:---:|:---:|
+| **BearingCNN (Própria)** | Treino do zero | **93.12%** | ~25.6M |
+| **ResNet18** | Fine-tuning (`Freeze=False`) | **98.40%** | ~11.1M |
+| **EfficientNet-B0** | Fine-tuning (`Freeze=False`) | **99.37%** | ~5.3M |
+| **Inception-v3** | Fine-tuning (`Freeze=False`) | **99.49%** | ~23.8M |
+
+> [!NOTE]
+> A divisão do dataset é realizada por **arquivos `.mat` inteiros** (e não por janelas individuais), garantindo que nenhuma amostra compartilhada por sobreposição (overlap de 50%) esteja presente nos conjuntos de treino e teste simultaneamente. Isso comprova a capacidade real de generalização dos modelos de Transfer Learning (até 99.49%) em comparação à CNN customizada (93.12%).
 
 <p align="center">
   <b>Curvas de Aprendizado (Perda e Acurácia - ResNet18)</b><br>
   <img src="docs/images/training_curves_resnet.png" width="750" alt="Curvas de Aprendizado - ResNet18">
-</p>
-
-<p align="center">
-  <b>Matriz de Confusão no Teste Inédito (100% de Acurácia)</b><br>
-  <img src="docs/images/confusion_matrix_resnet.png" width="480" alt="Matriz de Confusão - ResNet18">
 </p>
 
 ---
@@ -207,8 +205,8 @@ Projeto fundamentado em literatura consolidada de processamento de sinais e apre
 
 - [x] Revisão teórica e definição da metodologia
 - [x] Pipeline de pré-processamento (CWT → escalogramas)
-- [x] CNN treinada do zero (`BearingCNN` - **100.00%** de acurácia no teste)
-- [x] Transfer Learning (`ResNet18`, `Inception-v3`, `EfficientNet-B0` - **100.00%** de acurácia no teste)
+- [x] CNN treinada do zero (`BearingCNN` - **93.12%** de acurácia no teste)
+- [x] Transfer Learning (`ResNet18`, `Inception-v3`, `EfficientNet-B0` - até **99.49%** de acurácia no teste)
 - [x] Comparação sistemática de resultados entre arquiteturas
 - [ ] Validação em banco de dados de falhas reais (NASA IMS / Paderborn - TCC 2)
 

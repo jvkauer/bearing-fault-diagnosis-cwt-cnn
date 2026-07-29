@@ -57,26 +57,3 @@ def segment_signal(signal: np.ndarray, window_size: int = WINDOW_SIZE, step_size
     return windows
 
 
-def load_class_windows(class_name: str) -> list[np.ndarray]:
-    """
-    Carrega todos os arquivos .mat pertencentes a uma determinada classe e extrai todas as janelas.
-
-    Args:
-        class_name (str): Nome da classe ('normal', 'inner_race', 'outer_race', 'ball').
-
-    Returns:
-        list[np.ndarray]: Lista com todas as janelas extraídas para essa classe.
-    """
-    class_dir = RAW_DATA_DIR / class_name
-    if not class_dir.exists():
-        raise FileNotFoundError(f"Diretório da classe não encontrado: {class_dir}")
-        
-    mat_files = list(class_dir.glob("*.mat"))
-    all_windows = []
-    
-    for file_path in mat_files:
-        signal = load_cwru_mat_file(file_path)
-        windows = segment_signal(signal)
-        all_windows.extend(windows)
-        
-    return all_windows
