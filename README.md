@@ -210,8 +210,8 @@ Projeto fundamentado em literatura consolidada de processamento de sinais e apre
 
 - [x] Revisão teórica e definição da metodologia
 - [x] Pipeline de pré-processamento (CWT → escalogramas)
-- [x] CNN treinada do zero (`BearingCNN` - **93.12%** de acurácia no teste)
-- [x] Transfer Learning (`ResNet18`, `Inception-v3`, `EfficientNet-B0` - até **99.49%** de acurácia no teste)
+- [x] CNN treinada do zero (`BearingCNN` - **97.59%** de acurácia no teste)
+- [x] Transfer Learning (`ResNet18`, `Inception-v3`, `EfficientNet-B0` - até **99.83%** de acurácia no teste)
 - [x] Comparação sistemática de resultados entre arquiteturas
 - [ ] Validação em banco de dados de falhas reais (NASA IMS / Paderborn - TCC 2)
 
