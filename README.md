@@ -109,6 +109,11 @@ Resultados obtidos nos testes em 2.368 amostras inéditas do conjunto de teste, 
   <img src="docs/images/training_curves_resnet.png" width="750" alt="Curvas de Aprendizado - ResNet18">
 </p>
 
+<p align="center">
+  <b>Matriz de Confusão no Teste Inédito (ResNet18)</b><br>
+  <img src="docs/images/confusion_matrix_resnet.png" width="480" alt="Matriz de Confusão - ResNet18">
+</p>
+
 ---
 
 ## Estrutura do repositório
