@@ -105,13 +105,13 @@ Resultados obtidos nos testes em 2.368 amostras inéditas do conjunto de teste, 
 > A divisão do dataset é realizada por **arquivos `.mat` inteiros** (e não por janelas individuais), garantindo que nenhuma amostra compartilhada por sobreposição (overlap de 50%) esteja presente nos conjuntos de treino e teste simultaneamente. Isso comprova a capacidade real de generalização dos modelos de Transfer Learning (até 99.49%) em comparação à CNN customizada (93.12%).
 
 <p align="center">
-  <b>Curvas de Aprendizado (Perda e Acurácia - ResNet18)</b><br>
-  <img src="docs/images/training_curves_resnet.png" width="750" alt="Curvas de Aprendizado - ResNet18">
+  <b>Curvas de Aprendizado (Perda e Acurácia — Inception-v3)</b><br>
+  <img src="docs/images/training_curves_inception.png" width="750" alt="Curvas de Aprendizado - Inception-v3">
 </p>
 
 <p align="center">
-  <b>Matriz de Confusão no Teste Inédito (ResNet18)</b><br>
-  <img src="docs/images/confusion_matrix_resnet.png" width="480" alt="Matriz de Confusão - ResNet18">
+  <b>Matriz de Confusão no Teste Inédito (Inception-v3 — 99.49% de Acurácia)</b><br>
+  <img src="docs/images/confusion_matrix_inception.png" width="480" alt="Matriz de Confusão - Inception-v3">
 </p>
 
 ---
