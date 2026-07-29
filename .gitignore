@@ -26,6 +26,3 @@ __pycache__/
 .DS_Store
 Thumbs.db
 *.tmp
-
-# Documentos temporários de guia
-setup_guide.md

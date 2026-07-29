@@ -108,8 +108,9 @@ class BearingCNN(nn.Module):
         )
         
         self.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
-            nn.Linear(256 * 14 * 14, 512),
+            nn.Linear(256, 512),
             nn.ReLU(),
             nn.Dropout(dropout_rate),
             nn.Linear(512, num_classes)
