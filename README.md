@@ -94,12 +94,16 @@ flowchart LR
 
 Resultados obtidos nos testes em 2.368 amostras inéditas do conjunto de teste, com **divisão estrita por arquivos `.mat`** (prevenindo *Data Leakage* por sobreposição de janelas) e checkpointing automático pelo menor `val_loss`:
 
-| Modelo | Estratégia | Acurácia (teste) | Parâmetros |
-|---|---|:---:|:---:|
-| **BearingCNN (Própria)** | Treino do zero | **97.59%** | ~1.2M |
-| **ResNet18** | Fine-tuning (`Freeze=False`) | **99.83%** | ~11.1M |
-| **EfficientNet-B0** | Fine-tuning (`Freeze=False`) | **98.48%** | ~5.3M |
-| **Inception-v3** | Fine-tuning (`Freeze=False`) | **97.93%** | ~23.8M |
+| Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
+|---|---|:---:|:---:|:---:|
+| **BearingCNN (Própria)** | Treino do zero | **97.59%** | **100.00%** | ~1.2M |
+| **ResNet18** | Fine-tuning (`Freeze=False`) | **99.83%** | **100.00%** | ~11.1M |
+| **EfficientNet-B0** | Fine-tuning (`Freeze=False`) | **98.48%** | **100.00%** | ~5.3M |
+| **Inception-v3** | Fine-tuning (`Freeze=False`) | **97.93%** | **100.00%** | ~23.8M |
+
+> [!IMPORTANT]
+> **Detecção Binária (100% de Precisão e Recall na condição Normal):**
+> Na detecção de **presença de falha** (*Normal vs. Com Falha*), todos os modelos obtiveram **100.00% de Precisão e Recall** nas amostras de teste da classe normal. O pipeline alcançou **zero Falsos Negativos** (nenhum rolamento defeituoso passou como normal) e **zero Falsos Alarmes** (nenhum rolamento normal foi apontado com defeito). A pequena variação de acurácia (ex: 99.83% na ResNet-18) decorre exclusivamente da classificação específica entre os tipos de falha (*ball*, *inner_race*, *outer_race*).
 
 > [!NOTE]
 > A divisão do dataset é realizada por **arquivos `.mat` inteiros** (e não por janelas individuais), garantindo que nenhuma amostra compartilhada por sobreposição (overlap de 50%) esteja presente nos conjuntos de treino e teste simultaneamente. Isso comprova a capacidade real de generalização dos modelos de Transfer Learning (até 99.83%) em comparação à CNN customizada (97.59%).
@@ -123,8 +127,8 @@ bearing-fault-diagnosis-cwt-cnn/
 ├── data/                      # Dataset CWRU bruto (.mat) e processado (/processed)
 ├── notebooks/                 # Notebooks interativos do projeto
 │   ├── cwru_exploracao_cwt.ipynb      # Análise exploratória e geração da Figura 5
-│   ├── cwru_treinamento_cnn.ipynb     # Treinamento da BearingCNN própria (99.89%)
-│   └── cwru_transfer_learning.ipynb   # Experimentos de Transfer Learning (100.00%)
+│   ├── cwru_treinamento_cnn.ipynb     # Treinamento da BearingCNN própria (97.59% multiclasse / 100% binário)
+│   └── cwru_transfer_learning.ipynb   # Experimentos de Transfer Learning (até 99.83% multiclasse / 100% binário)
 ├── src/
 │   ├── config.py               # Configurações globais (caminhos, hiperparâmetros, número de classes)
 │   ├── dataset.py              # Carregamento dos arquivos .mat do CWRU e janelamento
