@@ -51,7 +51,7 @@ O relatório técnico completo (fundamentação teórica, metodologia e resultad
 | Resolução em frequência | Fixa | Fixa | Variável |
 | Adequação a sinais não estacionários | Inadequada | Parcial | Adequada |
 
-Falhas em rolamentos geram sinais não estacionários, com eventos transitórios que a FFT não consegue localizar no tempo. A CWT contorna essa limitação ao adaptar dinamicamente sua janela de análise — janelas estreitas para altas frequências (maior resolução temporal) e janelas largas para baixas frequências (maior resolução espectral).
+Falhas em rolamentos geram sinais não estacionários, com eventos transitórios que a FFT não consegue localizar no tempo. A CWT contorna essa limitação ao adaptar dinamicamente sua janela de análise, janelas estreitas para altas frequências (maior resolução temporal) e janelas largas para baixas frequências (maior resolução espectral).
 
 <p align="center">
   <img src="docs/images/signal_vs_scalogram.png" width="720" alt="Sinal de vibração no domínio do tempo e seu escalograma correspondente obtido via CWT">
