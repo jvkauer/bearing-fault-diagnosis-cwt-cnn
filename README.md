@@ -33,7 +33,7 @@ Transformada Wavelet Contínua e Redes Neurais Convolucionais aplicadas ao diagn
 Rolamentos são responsáveis por mais de 30% das falhas em máquinas elétricas rotativas, o que torna o diagnóstico precoce um requisito central de manutenção preditiva industrial. Este projeto implementa um pipeline de diagnóstico de falhas que combina:
 
 - **Transformada Wavelet Contínua (CWT)** para converter sinais de vibração unidimensionais em representações tempo-frequência bidimensionais (escalogramas), capturando a natureza não estacionária das falhas;
-- **Redes Neurais Convolucionais (CNN)** — treinadas do zero e via Transfer Learning (ResNet18, Inception-v3, EfficientNet-B0) — para classificação automática dos escalogramas gerados.
+- **Redes Neurais Convolucionais (CNN)** treinadas do zero e via Transfer Learning (ResNet18, Inception-v3, EfficientNet-B0) para classificação automática dos escalogramas gerados.
 
 O trabalho utiliza o dataset público **CWRU** (Case Western Reserve University), benchmark consolidado na literatura de diagnóstico de falhas em rolamentos, contemplando condições de operação normal e falhas na pista interna, pista externa e elemento rolante.
 
