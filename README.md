@@ -37,7 +37,7 @@ Rolamentos são responsáveis por mais de 30% das falhas em máquinas elétricas
 
 O trabalho utiliza o dataset público **CWRU** (Case Western Reserve University), benchmark consolidado na literatura de diagnóstico de falhas em rolamentos, contemplando condições de operação normal e falhas na pista interna, pista externa e elemento rolante.
 
-O relatório técnico completo (fundamentação teórica, metodologia e resultados) está disponível em [`docs/TCC.pdf`](docs/TCC.pdf).
+O relatório técnico completo (fundamentação teórica, metodologia e resultados) estará futuramente disponível em [`docs/TCC.pdf`](docs/TCC.pdf).
 
 ---
 
