@@ -10,8 +10,16 @@ from pathlib import Path
 # ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-RAW_DATA_DIR = DATA_DIR
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
+
+# Diretórios CWRU
+CWRU_DIR = DATA_DIR / "cwru"
+RAW_DATA_DIR = CWRU_DIR
+PROCESSED_DATA_DIR = CWRU_DIR / "processed"
+
+# Diretórios Paderborn (PU Dataset)
+PADERBORN_DIR = DATA_DIR / "paderborn"
+PADERBORN_RAW_DIR = PADERBORN_DIR / "raw"
+PADERBORN_PROCESSED_DIR = PADERBORN_DIR / "processed"
 
 # Classes do CWRU
 CLASSES = ["normal", "inner_race", "outer_race", "ball"]
