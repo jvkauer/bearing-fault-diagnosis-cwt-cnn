@@ -124,19 +124,24 @@ Resultados obtidos nos testes em 2.368 amostras inéditas do conjunto de teste, 
 
 ```
 bearing-fault-diagnosis-cwt-cnn/
-├── data/                      # Dataset CWRU bruto (.mat) e processado (/processed)
+├── data/
+│   ├── cwru/                  # Dataset CWRU bruto (.mat) e processado
+│   └── paderborn/             # Dataset Paderborn (PU) bruto (.mat) e processado
 ├── notebooks/                 # Notebooks interativos do projeto
-│   ├── cwru_exploracao_cwt.ipynb      # Análise exploratória e geração da Figura 5
-│   ├── cwru_treinamento_cnn.ipynb     # Treinamento da BearingCNN própria (97.59% multiclasse / 100% binário)
-│   └── cwru_transfer_learning.ipynb   # Experimentos de Transfer Learning (até 99.83% multiclasse / 100% binário)
+│   ├── cwru_exploracao_cwt.ipynb        # Análise exploratória e escalogramas CWRU
+│   ├── cwru_treinamento_cnn.ipynb       # Treinamento da BearingCNN no CWRU (97.59%)
+│   ├── cwru_transfer_learning.ipynb     # Transfer Learning no CWRU (até 99.83%)
+│   └── paderborn_exploracao_cwt.ipynb   # Análise exploratória de falhas reais Paderborn (64 kHz)
 ├── src/
-│   ├── config.py               # Configurações globais (caminhos, hiperparâmetros, número de classes)
-│   ├── dataset.py              # Carregamento dos arquivos .mat do CWRU e janelamento
-│   ├── cwt_processor.py        # Cálculo da CWT e exportação dos escalogramas 224x224
-│   ├── visualization.py        # Geração de gráficos no padrão da Monografia (Figura 5)
-│   ├── generate_dataset.py     # Script para geração automatizada do dataset de imagens
-│   ├── cnn_processor.py        # Arquitetura BearingCNN e motor de treino da rede própria
-│   └── transfer_learning.py    # Construtores e motor de treino para ResNet18/Inception-v3/EfficientNet-B0
+│   ├── config.py                 # Configurações globais de ambos os datasets
+│   ├── dataset_cwru.py           # Leitura e janelamento dos arquivos .mat do CWRU
+│   ├── generate_dataset_cwru.py  # Geração do dataset de escalogramas do CWRU
+│   ├── dataset_paderborn.py      # Leitura e janelamento do dataset de Paderborn (64 kHz)
+│   ├── generate_dataset_paderborn.py # Geração do dataset de escalogramas de Paderborn
+│   ├── cwt_processor.py          # Cálculo da CWT e exportação dos escalogramas 224x224
+│   ├── visualization.py          # Geração de gráficos acadêmicos e curvas
+│   ├── cnn_processor.py          # Arquitetura BearingCNN e motor de treino
+│   └── transfer_learning.py      # Construtores para ResNet18/Inception-v3/EfficientNet-B0
 ├── docs/
 │   ├── TCC.pdf                 # Relatório técnico completo do trabalho
 │   └── images/                 # Figuras utilizadas neste README

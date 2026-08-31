@@ -20,7 +20,7 @@ from src.config import (
     PROCESSED_DATA_DIR,
     RANDOM_SEED
 )
-from src.dataset import load_cwru_mat_file, segment_signal
+from src.dataset_cwru import load_cwru_mat_file, segment_signal
 from src.cwt_processor import compute_cwt, save_scalogram_png
 
 

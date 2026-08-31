@@ -61,3 +61,19 @@ DROPOUT_RATE = 0.5
 
 # Seed para reprodutibilidade dos experimentos
 RANDOM_SEED = 42
+
+# ==============================================================================
+# 5. Parâmetros do Dataset Paderborn (PU Dataset)
+# ==============================================================================
+PADERBORN_CLASSES = ["normal", "inner_race", "outer_race"]
+PADERBORN_FOLDER_MAP = {
+    "K001": "normal",
+    "KI14": "inner_race",
+    "KA15": "outer_race"
+}
+PADERBORN_FS = 64_000         # Taxa de amostragem de 64 kHz
+PADERBORN_WINDOW_SIZE = 4096  # Comprimento da janela (~64 ms)
+PADERBORN_STEP_SIZE = 2048    # Passo do janelamento (50% de overlap)
+PADERBORN_FREQ_MIN = 10       # Hz
+PADERBORN_FREQ_MAX = 20_000   # Hz (faixa estendida de alta frequência)
+
