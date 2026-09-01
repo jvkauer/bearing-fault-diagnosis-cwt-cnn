@@ -77,3 +77,16 @@ PADERBORN_STEP_SIZE = 2048    # Passo do janelamento (50% de overlap)
 PADERBORN_FREQ_MIN = 10       # Hz
 PADERBORN_FREQ_MAX = 20_000   # Hz (faixa estendida de alta frequência)
 
+# ==============================================================================
+# 6. Parâmetros do Computed Order Tracking (Ângulo-Ordem)
+# ==============================================================================
+ORDER_TRACKING_DIR = DATA_DIR / "order_tracking"
+ORDER_CWRU_DIR = ORDER_TRACKING_DIR / "cwru"
+ORDER_PADERBORN_DIR = ORDER_TRACKING_DIR / "paderborn"
+
+ORDER_SAMPLES_PER_REV = 1024  # Amostras uniformes por volta do eixo
+ORDER_NUM_REVS = 4            # Janela de 4 voltas completas do eixo
+ORDER_MIN = 0.5               # Ordem mínima (0.5x da rotação do eixo)
+ORDER_MAX = 15.0              # Ordem máxima (15x da rotação do eixo)
+
+
