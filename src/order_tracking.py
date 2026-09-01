@@ -47,15 +47,25 @@ def resample_to_angle_domain(
             f"Sinal muito curto ({len(signal)} amostras) para {num_revs} voltas a {rpm} RPM ({total_time_samples} amostras necessárias)."
         )
         
-    signal_segment = signal[:total_time_samples]
+    # Adicionar margem de segurança para evitar extrapolação cúbica nos extremos
+    safe_samples = min(total_time_samples + 4, len(signal))
+    signal_segment = signal[:safe_samples]
     t_orig = np.arange(len(signal_segment)) / fs
     
     # Novo vetor temporal com amostragem angular uniforme
+    # Garantir que t_angular nunca ultrapasse o último ponto de t_orig
     total_angle_samples = samples_per_rev * num_revs
     t_angular = np.linspace(0, total_time, total_angle_samples, endpoint=False)
     
-    # Interpolação cúbica para alta fidelidade
-    interpolator = interp1d(t_orig, signal_segment, kind="cubic", fill_value="extrapolate")
+    # Clip para garantir que nenhum ponto de t_angular exceda t_orig[-1]
+    t_angular = np.clip(t_angular, t_orig[0], t_orig[-1])
+    
+    # Interpolação cúbica com limites seguros (sem extrapolação polinomial)
+    interpolator = interp1d(
+        t_orig, signal_segment, kind="cubic",
+        bounds_error=False,
+        fill_value=(signal_segment[0], signal_segment[-1])
+    )
     angle_signal = interpolator(t_angular)
     
     return angle_signal

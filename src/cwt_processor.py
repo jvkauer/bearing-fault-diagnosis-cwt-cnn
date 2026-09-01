@@ -58,8 +58,14 @@ def scalogram_to_rgb(scalogram_magnitude: np.ndarray, cmap_name: str = "jet") ->
     Returns:
         PIL.Image.Image: Imagem RGB redimensionada para (IMG_WIDTH, IMG_HEIGHT).
     """
-    # Normalizar valores para intervalo [0, 1]
-    norm = plt.Normalize(vmin=scalogram_magnitude.min(), vmax=scalogram_magnitude.max())
+    # Normalizar valores para intervalo [0, 1] usando clipping por percentil
+    # para robustez contra outliers (spikes de interpolação ou ruído impulsivo)
+    vmin = np.percentile(scalogram_magnitude, 1)
+    vmax = np.percentile(scalogram_magnitude, 99)
+    if vmax <= vmin:
+        vmax = scalogram_magnitude.max()
+        vmin = scalogram_magnitude.min()
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
     cmap = plt.get_cmap(cmap_name)
     
     # Aplicar colormap -> array RGBA (0..1)

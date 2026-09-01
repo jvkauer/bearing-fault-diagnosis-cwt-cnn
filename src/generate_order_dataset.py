@@ -59,6 +59,8 @@ def extract_paderborn_rpm(file_name: str) -> float:
     """Extrai o RPM do nome do arquivo Paderborn (ex: 'N09_M07_F10_K001_1.mat' -> 900.0)."""
     if file_name.startswith("N09"):
         return 900.0
+    elif file_name.startswith("N12"):
+        return 1200.0
     elif file_name.startswith("N15"):
         return 1500.0
     return 900.0
