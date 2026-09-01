@@ -31,13 +31,17 @@ from src.config import (
 )
 
 
-def get_data_loaders(batch_size: int = BATCH_SIZE) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
+def get_data_loaders(
+    batch_size: int = BATCH_SIZE,
+    data_dir: Path = PROCESSED_DATA_DIR
+) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
-    Carrega os datasets de escalogramas CWT salvos em data/processed/ (train, val, test)
+    Carrega os datasets de escalogramas CWT salvos em data_dir (train, val, test)
     e retorna os DataLoaders correspondentes.
 
     Args:
         batch_size (int): Tamanho do lote (padrão definido em config.py).
+        data_dir (Path): Diretório raiz dos dados processados contendo train/, val/ e test/.
 
     Returns:
         Tuple contendo (train_loader, val_loader, test_loader, classes).
@@ -48,9 +52,9 @@ def get_data_loaders(batch_size: int = BATCH_SIZE) -> Tuple[DataLoader, DataLoad
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    train_dir = PROCESSED_DATA_DIR / "train"
-    val_dir = PROCESSED_DATA_DIR / "val"
-    test_dir = PROCESSED_DATA_DIR / "test"
+    train_dir = data_dir / "train"
+    val_dir = data_dir / "val"
+    test_dir = data_dir / "test"
 
     if not train_dir.exists():
         raise FileNotFoundError(f"Diretório de treino não encontrado em {train_dir}")
@@ -124,7 +128,9 @@ class BearingCNN(nn.Module):
 
 def train_and_evaluate_bearing_cnn(
     num_epochs: int = NUM_EPOCHS,
-    lr: float = LEARNING_RATE
+    lr: float = LEARNING_RATE,
+    data_dir: Path = PROCESSED_DATA_DIR,
+    checkpoint_name: str = "checkpoint_bearing_cnn_best.pth"
 ) -> Dict[str, Any]:
     """
     Treina e avalia a arquitetura BearingCNN personalizada com checkpointing
@@ -133,20 +139,22 @@ def train_and_evaluate_bearing_cnn(
     Args:
         num_epochs (int): Número de épocas de treinamento.
         lr (float): Taxa de aprendizado do otimizador Adam.
+        data_dir (Path): Diretório dos dados processados (train, val, test).
+        checkpoint_name (str): Nome do arquivo para salvar o checkpoint.
 
     Returns:
         Dict contendo: model_name, history (train/val loss e acc),
         best_val_acc, test_acc, test_preds, test_labels, classes.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader, test_loader, classes = get_data_loaders(BATCH_SIZE)
+    train_loader, val_loader, test_loader, classes = get_data_loaders(BATCH_SIZE, data_dir=data_dir)
     
     model = BearingCNN(num_classes=len(classes)).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
     best_val_loss = float("inf")
-    checkpoint_path = Path("checkpoint_bearing_cnn_best.pth")
+    checkpoint_path = Path(checkpoint_name)
     
     history = {
         "train_loss": [],

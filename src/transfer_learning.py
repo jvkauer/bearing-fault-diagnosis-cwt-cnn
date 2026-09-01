@@ -29,13 +29,18 @@ from src.config import (
 )
 
 
-def get_transfer_dataloaders(img_size: int = 224, batch_size: int = BATCH_SIZE) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
+def get_transfer_dataloaders(
+    img_size: int = 224,
+    batch_size: int = BATCH_SIZE,
+    data_dir: Path = PROCESSED_DATA_DIR
+) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
     Retorna DataLoaders com o tamanho de imagem específico do modelo (224x224 ou 299x299).
 
     Args:
         img_size (int): Dimensão espacial de entrada da rede (224 ou 299).
         batch_size (int): Tamanho do lote.
+        data_dir (Path): Diretório raiz dos dados processados (contendo train, val, test).
 
     Returns:
         Tuple contendo (train_loader, val_loader, test_loader, classes).
@@ -46,9 +51,9 @@ def get_transfer_dataloaders(img_size: int = 224, batch_size: int = BATCH_SIZE) 
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     
-    train_dir = PROCESSED_DATA_DIR / "train"
-    val_dir = PROCESSED_DATA_DIR / "val"
-    test_dir = PROCESSED_DATA_DIR / "test"
+    train_dir = data_dir / "train"
+    val_dir = data_dir / "val"
+    test_dir = data_dir / "test"
     
     if not train_dir.exists():
         raise FileNotFoundError(f"Diretório de treino não encontrado em {train_dir}")
@@ -121,7 +126,9 @@ def train_and_evaluate_transfer_model(
     model_name: str,
     num_epochs: int = NUM_EPOCHS,
     lr: float = LEARNING_RATE,
-    freeze: bool = True
+    freeze: bool = True,
+    data_dir: Path = PROCESSED_DATA_DIR,
+    checkpoint_prefix: str = "checkpoint"
 ) -> Dict[str, Any]:
     """
     Treina e avalia modelos de Transfer Learning com checkpointing automático
@@ -132,22 +139,26 @@ def train_and_evaluate_transfer_model(
         num_epochs (int): Número de épocas de treinamento.
         lr (float): Taxa de aprendizado do otimizador Adam.
         freeze (bool): Se True, congela o backbone (feature extraction).
+        data_dir (Path): Diretório dos dados processados (train, val, test).
+        checkpoint_prefix (str): Prefixo do arquivo de checkpoint salvo.
 
     Returns:
         Dict contendo: model_name, history (train/val loss e acc),
         best_val_acc, test_acc, test_preds, test_labels, classes.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, img_size = build_transfer_model(model_name, num_classes=4, freeze_backbone=freeze)
-    model = model.to(device)
+    img_size = 299 if model_name == "inception_v3" else 224
     
-    train_loader, val_loader, test_loader, classes = get_transfer_dataloaders(img_size=img_size)
+    train_loader, val_loader, test_loader, classes = get_transfer_dataloaders(img_size=img_size, data_dir=data_dir)
+    
+    model, _ = build_transfer_model(model_name, num_classes=len(classes), freeze_backbone=freeze)
+    model = model.to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
     
     best_val_loss = float("inf")
-    checkpoint_path = Path(f"checkpoint_{model_name}_best.pth")
+    checkpoint_path = Path(f"{checkpoint_prefix}_{model_name}_best.pth")
     
     history = {
         "train_loss": [],
