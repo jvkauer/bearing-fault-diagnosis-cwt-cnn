@@ -45,7 +45,7 @@ def load_paderborn_mat_file(file_path: Path, channel_name: str = "vibration_1") 
     for idx in range(y_channels.shape[1]):
         ch = y_channels[0, idx]
         ch_name = ch["Name"][0] if len(ch["Name"]) > 0 else ""
-        if ch_name == channel_name:
+        if str(ch_name).strip().lower() == channel_name.strip().lower():
             raw_data = ch["Data"]
             target_data = raw_data[0].flatten().astype(np.float64)
             break

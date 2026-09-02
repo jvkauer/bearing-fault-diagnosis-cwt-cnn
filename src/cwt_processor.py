@@ -46,7 +46,12 @@ def compute_cwt(signal_window: np.ndarray) -> np.ndarray:
     return scalogram_magnitude
 
 
-def scalogram_to_rgb(scalogram_magnitude: np.ndarray, cmap_name: str = "jet") -> Image.Image:
+def scalogram_to_rgb(
+    scalogram_magnitude: np.ndarray,
+    cmap_name: str = "jet",
+    vmin: float = None,
+    vmax: float = None
+) -> Image.Image:
     """
     Converte a matriz numérica do escalograma em uma Imagem PIL RGB (224x224),
     sem bordas, eixos ou elementos visuais.
@@ -54,17 +59,21 @@ def scalogram_to_rgb(scalogram_magnitude: np.ndarray, cmap_name: str = "jet") ->
     Args:
         scalogram_magnitude (np.ndarray): Matriz de magnitude CWT.
         cmap_name (str): Nome do colormap do matplotlib (padrão: 'jet').
+        vmin (float, optional): Limite inferior GLOBAL de normalização. Se None, usa percentil local.
+        vmax (float, optional): Limite superior GLOBAL de normalização. Se None, usa percentil local.
 
     Returns:
         PIL.Image.Image: Imagem RGB redimensionada para (IMG_WIDTH, IMG_HEIGHT).
     """
-    # Normalizar valores para intervalo [0, 1] usando clipping por percentil
-    # para robustez contra outliers (spikes de interpolação ou ruído impulsivo)
-    vmin = np.percentile(scalogram_magnitude, 1)
-    vmax = np.percentile(scalogram_magnitude, 99)
+    # Se vmin/vmax globais não foram fornecidos, calcular localmente (per-sample)
+    if vmin is None or vmax is None:
+        vmin = np.percentile(scalogram_magnitude, 1)
+        vmax = np.percentile(scalogram_magnitude, 99)
     if vmax <= vmin:
-        vmax = scalogram_magnitude.max()
-        vmin = scalogram_magnitude.min()
+        vmax = float(scalogram_magnitude.max())
+        vmin = float(scalogram_magnitude.min())
+        if vmax <= vmin:
+            vmax = vmin + 1e-8
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
     cmap = plt.get_cmap(cmap_name)
     
@@ -82,7 +91,13 @@ def scalogram_to_rgb(scalogram_magnitude: np.ndarray, cmap_name: str = "jet") ->
     return img
 
 
-def save_scalogram_png(scalogram_magnitude: np.ndarray, output_path: str, cmap_name: str = "jet"):
+def save_scalogram_png(
+    scalogram_magnitude: np.ndarray,
+    output_path: str,
+    cmap_name: str = "jet",
+    vmin: float = None,
+    vmax: float = None
+):
     """
     Salva diretamente a matriz do escalograma como arquivo PNG RGB de 224x224 pixels.
 
@@ -90,6 +105,8 @@ def save_scalogram_png(scalogram_magnitude: np.ndarray, output_path: str, cmap_n
         scalogram_magnitude (np.ndarray): Matriz de magnitude CWT.
         output_path (str): Caminho onde o arquivo PNG será salvo.
         cmap_name (str): Colormap a utilizar.
+        vmin (float, optional): Limite inferior global.
+        vmax (float, optional): Limite superior global.
     """
-    img = scalogram_to_rgb(scalogram_magnitude, cmap_name=cmap_name)
+    img = scalogram_to_rgb(scalogram_magnitude, cmap_name=cmap_name, vmin=vmin, vmax=vmax)
     img.save(output_path, format="PNG")
