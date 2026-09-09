@@ -159,11 +159,12 @@ def plot_confusion_matrix(
         model_name (str): Nome do modelo para o título (ex: "ResNet-18").
         save_path (str, optional): Caminho para salvar a figura em PNG.
     """
-    cm = confusion_matrix(res['test_labels'], res['test_preds'])
+    labels = np.arange(len(res['classes']))
+    cm = confusion_matrix(res['test_labels'], res['test_preds'], labels=labels)
     fig, ax = plt.subplots(figsize=(6, 5))
     im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     ax.figure.colorbar(im, ax=ax)
-    ax.set(xticks=np.arange(cm.shape[1]), yticks=np.arange(cm.shape[0]),
+    ax.set(xticks=labels, yticks=labels,
         xticklabels=res['classes'], yticklabels=res['classes'],
         title=f'Matriz de Confusão — {model_name}',
         ylabel='Classe Real', xlabel='Classe Predita')
