@@ -73,65 +73,101 @@ def extract_paderborn_rpm(file_name: str) -> float:
 
 
 # =============================================================================
-#  Funções auxiliares para o Two-Pass com Z-Score Global
+#  Funções auxiliares para o Two-Pass com Z-Score Global Livre de Data Leakage
 # =============================================================================
 
-def _compute_cwru_global_signal_stats():
-    """Calcula média e desvio padrão GLOBAIS sobre todos os sinais do CWRU."""
-    print("[Z-SCORE] Calculando estatísticas globais do CWRU...")
+def _split_files_list(
+    files: list,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    test_ratio: float = 0.15,
+    seed: int = RANDOM_SEED
+) -> dict:
+    """Divide lista de arquivos em train, val e test evitando data leakage."""
+    temp_ratio = val_ratio + test_ratio
+    train_files, temp_files = train_test_split(
+        files, test_size=temp_ratio, random_state=seed, shuffle=True
+    )
+    val_files, test_files = train_test_split(
+        temp_files, test_size=(test_ratio / temp_ratio), random_state=seed, shuffle=True
+    )
+    return {"train": train_files, "val": val_files, "test": test_files}
+
+
+def _compute_cwru_global_signal_stats(train_files_by_class: dict = None):
+    """Calcula média e desvio padrão GLOBAIS sobre os sinais do CWRU (estritamente partição de treino)."""
+    print("[Z-SCORE] Calculando estatísticas globais do CWRU (apenas partição de treino)...")
     all_vals = []
     for cls_name in CWRU_CLASSES:
-        class_dir = CWRU_DIR / cls_name
-        for mat_file in sorted(class_dir.glob("*.mat")):
+        if train_files_by_class is not None and cls_name in train_files_by_class:
+            mat_files = train_files_by_class[cls_name]
+        else:
+            class_dir = CWRU_DIR / cls_name
+            mat_files = sorted(class_dir.glob("*.mat"))
+        for mat_file in mat_files:
             sig = load_cwru_mat_file(mat_file)
             all_vals.append(sig)
     all_vals = np.concatenate(all_vals)
     mean, std = float(np.mean(all_vals)), float(np.std(all_vals))
-    print(f"    CWRU global: mean={mean:.6f}, std={std:.6f} ({len(all_vals)} amostras)")
+    print(f"    CWRU global (treino): mean={mean:.6f}, std={std:.6f} ({len(all_vals)} amostras)")
     return mean, std
 
 
-def _compute_paderborn_global_signal_stats(max_files_per_class=10):
-    """Calcula média e desvio padrão GLOBAIS sobre os sinais do Paderborn."""
-    print("[Z-SCORE] Calculando estatísticas globais do Paderborn...")
+def _compute_paderborn_global_signal_stats(train_files_by_folder: dict = None, max_files_per_class: int = 10):
+    """Calcula média e desvio padrão GLOBAIS sobre os sinais do Paderborn (estritamente partição de treino)."""
+    print("[Z-SCORE] Calculando estatísticas globais do Paderborn (apenas partição de treino)...")
     all_vals = []
     for folder_name in PADERBORN_FOLDER_MAP.keys():
-        class_dir = PADERBORN_RAW_DIR / folder_name
-        mat_files = sorted(class_dir.glob("*.mat"))
-        if max_files_per_class:
-            mat_files = mat_files[:max_files_per_class]
+        if train_files_by_folder is not None and folder_name in train_files_by_folder:
+            mat_files = train_files_by_folder[folder_name]
+        else:
+            class_dir = PADERBORN_RAW_DIR / folder_name
+            mat_files = sorted(class_dir.glob("*.mat"))
+            if max_files_per_class:
+                mat_files = mat_files[:max_files_per_class]
         for mat_file in mat_files:
             sig = load_paderborn_mat_file(mat_file)
             all_vals.append(sig)
     all_vals = np.concatenate(all_vals)
     mean, std = float(np.mean(all_vals)), float(np.std(all_vals))
-    print(f"    Paderborn global: mean={mean:.6f}, std={std:.6f} ({len(all_vals)} amostras)")
+    print(f"    Paderborn global (treino): mean={mean:.6f}, std={std:.6f} ({len(all_vals)} amostras)")
     return mean, std
 
 
-def _compute_xjtu_global_signal_stats(max_files_per_class=10):
-    """Calcula média e desvio padrão GLOBAIS sobre os sinais do XJTU-SY."""
-    print("[Z-SCORE] Calculando estatísticas globais do XJTU-SY...")
+def _compute_xjtu_global_signal_stats(train_files_by_class: dict = None, max_files_per_class: int = 10):
+    """Calcula média e desvio padrão GLOBAIS sobre os sinais do XJTU-SY (estritamente partição de treino)."""
+    print("[Z-SCORE] Calculando estatísticas globais do XJTU-SY (apenas partição de treino)...")
     all_vals = []
-    manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
-    for cls_name, files in manifest.items():
-        for csv_file in files:
-            sig = load_xjtu_csv_file(csv_file, channel=0)
-            all_vals.append(sig)
+    if train_files_by_class is not None:
+        for cls_name, files in train_files_by_class.items():
+            for csv_file in files:
+                sig = load_xjtu_csv_file(csv_file, channel=0)
+                all_vals.append(sig)
+    else:
+        manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
+        for cls_name, files in manifest.items():
+            for csv_file in files:
+                sig = load_xjtu_csv_file(csv_file, channel=0)
+                all_vals.append(sig)
     all_vals = np.concatenate(all_vals)
     mean, std = float(np.mean(all_vals)), float(np.std(all_vals))
-    print(f"    XJTU-SY global: mean={mean:.6f}, std={std:.6f} ({len(all_vals)} amostras)")
+    print(f"    XJTU-SY global (treino): mean={mean:.6f}, std={std:.6f} ({len(all_vals)} amostras)")
     return mean, std
 
 
-def _cwru_order_cwt_pass1(global_mean, global_std, samples_per_file=4):
-    """Calcula vmin/vmax globais amostrando chunks representativos do CWRU."""
-    print("[PASS 1] Estimando vmin/vmax globais do CWRU Order-CWT...")
+def _cwru_order_cwt_pass1(global_mean, global_std, train_files_by_class: dict = None, samples_per_file: int = 4):
+    """Calcula vmin/vmax globais amostrando chunks representativos do CWRU (estritamente partição de treino)."""
+    print("[PASS 1] Estimando vmin/vmax globais do CWRU Order-CWT (treino)...")
     all_p1, all_p99 = [], []
 
     for cls_name in CWRU_CLASSES:
-        class_dir = CWRU_DIR / cls_name
-        for mat_file in sorted(class_dir.glob("*.mat")):
+        if train_files_by_class is not None and cls_name in train_files_by_class:
+            mat_files = train_files_by_class[cls_name]
+        else:
+            class_dir = CWRU_DIR / cls_name
+            mat_files = sorted(class_dir.glob("*.mat"))
+
+        for mat_file in mat_files:
             rpm = extract_cwru_rpm(mat_file.name)
             sig = load_cwru_mat_file(mat_file)
             sig = (sig - global_mean) / global_std
@@ -165,16 +201,19 @@ def _cwru_order_cwt_pass1(global_mean, global_std, samples_per_file=4):
     return global_vmin, global_vmax
 
 
-def _paderborn_order_cwt_pass1(global_mean, global_std, max_files_per_class=10, samples_per_file=4):
-    """Calcula vmin/vmax globais amostrando chunks representativos do Paderborn."""
-    print("[PASS 1] Estimando vmin/vmax globais do Paderborn Order-CWT...")
+def _paderborn_order_cwt_pass1(global_mean, global_std, train_files_by_folder: dict = None, max_files_per_class: int = 10, samples_per_file: int = 4):
+    """Calcula vmin/vmax globais amostrando chunks representativos do Paderborn (estritamente partição de treino)."""
+    print("[PASS 1] Estimando vmin/vmax globais do Paderborn Order-CWT (treino)...")
     all_p1, all_p99 = [], []
 
     for folder_name in PADERBORN_FOLDER_MAP.keys():
-        class_dir = PADERBORN_RAW_DIR / folder_name
-        mat_files = sorted(class_dir.glob("*.mat"))
-        if max_files_per_class:
-            mat_files = mat_files[:max_files_per_class]
+        if train_files_by_folder is not None and folder_name in train_files_by_folder:
+            mat_files = train_files_by_folder[folder_name]
+        else:
+            class_dir = PADERBORN_RAW_DIR / folder_name
+            mat_files = sorted(class_dir.glob("*.mat"))
+            if max_files_per_class:
+                mat_files = mat_files[:max_files_per_class]
 
         for mat_file in mat_files:
             rpm = extract_paderborn_rpm(mat_file.name)
@@ -210,13 +249,18 @@ def _paderborn_order_cwt_pass1(global_mean, global_std, max_files_per_class=10, 
     return global_vmin, global_vmax
 
 
-def _xjtu_order_cwt_pass1(global_mean, global_std, max_files_per_class=10, samples_per_file=4):
-    """Calcula vmin/vmax globais amostrando chunks representativos do XJTU-SY."""
-    print("[PASS 1] Estimando vmin/vmax globais do XJTU-SY Order-CWT...")
+def _xjtu_order_cwt_pass1(global_mean, global_std, train_files_by_class: dict = None, max_files_per_class: int = 10, samples_per_file: int = 4):
+    """Calcula vmin/vmax globais amostrando chunks representativos do XJTU-SY (estritamente partição de treino)."""
+    print("[PASS 1] Estimando vmin/vmax globais do XJTU-SY Order-CWT (treino)...")
     all_p1, all_p99 = [], []
-    manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
 
-    for cls_name, files in manifest.items():
+    if train_files_by_class is not None:
+        file_items = train_files_by_class.items()
+    else:
+        manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
+        file_items = manifest.items()
+
+    for cls_name, files in file_items:
         for csv_file in files:
             rpm = extract_xjtu_rpm(csv_file)
             sig = load_xjtu_csv_file(csv_file, channel=0)
@@ -262,7 +306,8 @@ def generate_cwru_order_dataset(
     global_vmax: float,
     train_ratio: float = 0.70,
     val_ratio: float = 0.15,
-    test_ratio: float = 0.15
+    test_ratio: float = 0.15,
+    splits_by_class: dict = None
 ):
     """Gera escalogramas de ordens para o dataset CWRU com normalização GLOBAL."""
     print("=" * 70)
@@ -279,20 +324,14 @@ def generate_cwru_order_dataset(
     total_images = 0
 
     for cls_name in CWRU_CLASSES:
-        class_dir = CWRU_DIR / cls_name
-        mat_files = sorted(class_dir.glob("*.mat"))
-        if not mat_files:
-            continue
-
-        temp_ratio = val_ratio + test_ratio
-        train_files, temp_files = train_test_split(
-            mat_files, test_size=temp_ratio, random_state=RANDOM_SEED, shuffle=True
-        )
-        val_files, test_files = train_test_split(
-            temp_files, test_size=(test_ratio / temp_ratio), random_state=RANDOM_SEED, shuffle=True
-        )
-
-        splits = {"train": train_files, "val": val_files, "test": test_files}
+        if splits_by_class is not None and cls_name in splits_by_class:
+            splits = splits_by_class[cls_name]
+        else:
+            class_dir = CWRU_DIR / cls_name
+            mat_files = sorted(class_dir.glob("*.mat"))
+            if not mat_files:
+                continue
+            splits = _split_files_list(mat_files, train_ratio, val_ratio, test_ratio)
 
         for split_name, files in splits.items():
             dest = ORDER_CWRU_DIR / split_name / cls_name
@@ -341,7 +380,8 @@ def generate_paderborn_order_dataset(
     train_ratio: float = 0.70,
     val_ratio: float = 0.15,
     test_ratio: float = 0.15,
-    max_files_per_class: int = 10
+    max_files_per_class: int = 10,
+    splits_by_folder: dict = None
 ):
     """Gera escalogramas de ordens para o dataset Paderborn com normalização GLOBAL."""
     print("\n" + "=" * 70)
@@ -358,20 +398,16 @@ def generate_paderborn_order_dataset(
     total_images = 0
 
     for folder_name, cls_name in PADERBORN_FOLDER_MAP.items():
-        class_dir = PADERBORN_RAW_DIR / folder_name
-        mat_files = sorted(class_dir.glob("*.mat"))
-        if max_files_per_class:
-            mat_files = mat_files[:max_files_per_class]
-
-        temp_ratio = val_ratio + test_ratio
-        train_files, temp_files = train_test_split(
-            mat_files, test_size=temp_ratio, random_state=RANDOM_SEED, shuffle=True
-        )
-        val_files, test_files = train_test_split(
-            temp_files, test_size=(test_ratio / temp_ratio), random_state=RANDOM_SEED, shuffle=True
-        )
-
-        splits = {"train": train_files, "val": val_files, "test": test_files}
+        if splits_by_folder is not None and folder_name in splits_by_folder:
+            splits = splits_by_folder[folder_name]
+        else:
+            class_dir = PADERBORN_RAW_DIR / folder_name
+            mat_files = sorted(class_dir.glob("*.mat"))
+            if max_files_per_class:
+                mat_files = mat_files[:max_files_per_class]
+            if not mat_files:
+                continue
+            splits = _split_files_list(mat_files, train_ratio, val_ratio, test_ratio)
 
         for split_name, files in splits.items():
             dest = ORDER_PADERBORN_DIR / split_name / cls_name
@@ -420,7 +456,8 @@ def generate_xjtu_order_dataset(
     train_ratio: float = 0.70,
     val_ratio: float = 0.15,
     test_ratio: float = 0.15,
-    max_files_per_class: int = 30
+    max_files_per_class: int = 30,
+    splits_by_class: dict = None
 ):
     """Gera escalogramas de ordens para o dataset XJTU-SY com normalização GLOBAL."""
     print("\n" + "=" * 70)
@@ -438,16 +475,13 @@ def generate_xjtu_order_dataset(
     total_images = 0
 
     for cls_name in XJTU_CLASSES:
-        files = manifest[cls_name]
-        temp_ratio = val_ratio + test_ratio
-        train_files, temp_files = train_test_split(
-            files, test_size=temp_ratio, random_state=RANDOM_SEED, shuffle=True
-        )
-        val_files, test_files = train_test_split(
-            temp_files, test_size=(test_ratio / temp_ratio), random_state=RANDOM_SEED, shuffle=True
-        )
-
-        splits = {"train": train_files, "val": val_files, "test": test_files}
+        if splits_by_class is not None and cls_name in splits_by_class:
+            splits = splits_by_class[cls_name]
+        else:
+            if cls_name not in manifest or not manifest[cls_name]:
+                continue
+            files = manifest[cls_name]
+            splits = _split_files_list(files, train_ratio, val_ratio, test_ratio)
 
         for split_name, s_files in splits.items():
             dest = ORDER_XJTU_DIR / split_name / cls_name
@@ -491,33 +525,69 @@ def generate_xjtu_order_dataset(
 def generate_all_order_datasets(max_files_per_class: int = 10, include_xjtu: bool = True):
     """
     Pipeline completo de geração dos datasets Order-CWT para CWRU, Paderborn e XJTU-SY:
-    1. Z-Score Global dos sinais 1D
-    2. Estimativa Amostrada de vmin/vmax globais compartilhados entre todos os datasets
-    3. Geração e gravação dos escalogramas PNG com normalização global unificada
+    1. Pré-particionamento estrito de arquivos (train/val/test) por classe/pasta (sem data leakage).
+    2. Z-Score Global dos sinais 1D estimado estritamente sobre a partição de TREINO.
+    3. Estimativa Amostrada de vmin/vmax globais compartilhados (Passo 1) sobre a partição de TREINO.
+    4. Geração e gravação dos escalogramas PNG com normalização global unificada.
     """
-    cwru_mean, cwru_std = _compute_cwru_global_signal_stats()
-    pad_mean, pad_std = _compute_paderborn_global_signal_stats(max_files_per_class=max_files_per_class)
+    print("=" * 70)
+    print("[PIPELINE ORDER-CWT] Particionamento prévio estrito (Prevenção de Data Leakage)...")
+    print("=" * 70)
 
-    cwru_vmin, cwru_vmax = _cwru_order_cwt_pass1(cwru_mean, cwru_std, samples_per_file=4)
-    pad_vmin, pad_vmax = _paderborn_order_cwt_pass1(pad_mean, pad_std, max_files_per_class=max_files_per_class, samples_per_file=4)
+    # 1. Particionar arquivos por classe previamente com seed fixa
+    cwru_splits = {}
+    cwru_train_files = {}
+    for cls_name in CWRU_CLASSES:
+        c_files = sorted((CWRU_DIR / cls_name).glob("*.mat"))
+        if c_files:
+            cwru_splits[cls_name] = _split_files_list(c_files)
+            cwru_train_files[cls_name] = cwru_splits[cls_name]["train"]
+
+    pad_splits = {}
+    pad_train_files = {}
+    for folder_name in PADERBORN_FOLDER_MAP.keys():
+        p_files = sorted((PADERBORN_RAW_DIR / folder_name).glob("*.mat"))
+        if max_files_per_class:
+            p_files = p_files[:max_files_per_class]
+        if p_files:
+            pad_splits[folder_name] = _split_files_list(p_files)
+            pad_train_files[folder_name] = pad_splits[folder_name]["train"]
+
+    xjtu_splits = {}
+    xjtu_train_files = {}
+    if include_xjtu:
+        xjtu_manifest = get_xjtu_manifest(max_files_per_class=30)
+        for cls_name, files in xjtu_manifest.items():
+            if files:
+                xjtu_splits[cls_name] = _split_files_list(files)
+                xjtu_train_files[cls_name] = xjtu_splits[cls_name]["train"]
+
+    # 2. Estatísticas Z-Score estritamente sobre a partição de treino
+    cwru_mean, cwru_std = _compute_cwru_global_signal_stats(train_files_by_class=cwru_train_files)
+    pad_mean, pad_std = _compute_paderborn_global_signal_stats(train_files_by_folder=pad_train_files, max_files_per_class=max_files_per_class)
+
+    # 3. Pass 1 para estimativa de vmin/vmax estritamente sobre a partição de treino
+    cwru_vmin, cwru_vmax = _cwru_order_cwt_pass1(cwru_mean, cwru_std, train_files_by_class=cwru_train_files, samples_per_file=4)
+    pad_vmin, pad_vmax = _paderborn_order_cwt_pass1(pad_mean, pad_std, train_files_by_folder=pad_train_files, samples_per_file=4)
 
     all_vmins = [cwru_vmin, pad_vmin]
     all_vmaxs = [cwru_vmax, pad_vmax]
 
     if include_xjtu:
-        xjtu_mean, xjtu_std = _compute_xjtu_global_signal_stats(max_files_per_class=max_files_per_class)
-        xjtu_vmin, xjtu_vmax = _xjtu_order_cwt_pass1(xjtu_mean, xjtu_std, max_files_per_class=max_files_per_class, samples_per_file=4)
+        xjtu_mean, xjtu_std = _compute_xjtu_global_signal_stats(train_files_by_class=xjtu_train_files, max_files_per_class=max_files_per_class)
+        xjtu_vmin, xjtu_vmax = _xjtu_order_cwt_pass1(xjtu_mean, xjtu_std, train_files_by_class=xjtu_train_files, samples_per_file=4)
         all_vmins.append(xjtu_vmin)
         all_vmaxs.append(xjtu_vmax)
 
     shared_vmin = min(all_vmins)
     shared_vmax = max(all_vmaxs)
-    print(f"\n[GLOBAL COMPARTILHADO TRIPARTITE] vmin={shared_vmin:.6f}, vmax={shared_vmax:.6f}\n")
+    print(f"\n[GLOBAL COMPARTILHADO TRIPARTITE (TREINO)] vmin={shared_vmin:.6f}, vmax={shared_vmax:.6f}\n")
 
-    generate_cwru_order_dataset(cwru_mean, cwru_std, shared_vmin, shared_vmax)
-    generate_paderborn_order_dataset(pad_mean, pad_std, shared_vmin, shared_vmax, max_files_per_class=max_files_per_class)
+    # 4. Geração dos escalogramas com normalização global e splits preservados
+    generate_cwru_order_dataset(cwru_mean, cwru_std, shared_vmin, shared_vmax, splits_by_class=cwru_splits)
+    generate_paderborn_order_dataset(pad_mean, pad_std, shared_vmin, shared_vmax, max_files_per_class=max_files_per_class, splits_by_folder=pad_splits)
     if include_xjtu:
-        generate_xjtu_order_dataset(xjtu_mean, xjtu_std, shared_vmin, shared_vmax, max_files_per_class=30)
+        generate_xjtu_order_dataset(xjtu_mean, xjtu_std, shared_vmin, shared_vmax, max_files_per_class=30, splits_by_class=xjtu_splits)
 
 
 if __name__ == "__main__":

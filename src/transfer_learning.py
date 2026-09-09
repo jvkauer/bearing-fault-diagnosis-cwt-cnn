@@ -232,10 +232,11 @@ def train_and_evaluate_transfer_model(
     with torch.no_grad():
         for imgs, labels in test_loader:
             imgs = imgs.to(device)
+            labels = labels.to(device)
             outputs = model(imgs)
             _, preds = torch.max(outputs, 1)
             test_preds.extend(preds.cpu().numpy())
-            test_labels.extend(labels.numpy())
+            test_labels.extend(labels.cpu().numpy())
             
     test_preds = np.array(test_preds)
     test_labels = np.array(test_labels)

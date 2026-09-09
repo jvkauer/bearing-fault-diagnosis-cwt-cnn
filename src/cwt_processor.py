@@ -1,6 +1,15 @@
 """
 Módulo de Processamento CWT (Continuous Wavelet Transform).
 Converte janelas de sinais de vibração unidimensionais em escalogramas bidimensionais.
+
+Nota sobre Orientação Espectral e Coordenadas:
+- Na matriz numérica gerada por pywt.cwt(), a linha 0 corresponde a target_freqs[0] (f_min = 10 Hz),
+  e a última linha corresponde a target_freqs[-1] (f_max = 6000 Hz).
+- Ao serializar via PIL (Image.fromarray), a convenção de matriz define a linha 0 como o topo da imagem.
+  As Redes Neurais Convolucionais (CNNs) operam perfeitamente sob essa convenção invariante.
+- Para visualização física e científica com eixos graduados em Matplotlib (plt.imshow),
+  utiliza-se origin='lower' com extent=[t_min, t_max, f_min, f_max] para alinhar as baixas
+  frequências na base e as altas frequências no topo cartesiano.
 """
 
 import numpy as np
@@ -14,6 +23,9 @@ def get_scales():
     """
     Gera as escalas da wavelet correspondentes às frequências linearmente espaçadas
     entre FREQ_MIN e FREQ_MAX.
+    
+    A linha 0 corresponde à menor frequência (maior escala) e a última linha à maior
+    frequência (menor escala).
 
     Returns:
         tuple: (scales, target_freqs) — Escalas da wavelet e frequências alvo em Hz.
