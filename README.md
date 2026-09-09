@@ -296,6 +296,14 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### Estruturação dos Dados Brutos
+
+Como o diretório `data/` é ignorado pelo Git (para proteger o repositório contra arquivos pesados), ao clonar o projeto posicione os dados originais nas seguintes pastas:
+
+- **CWRU (`.mat`):** `data/cwru/` (subpastas `normal/`, `inner_race/`, `outer_race/`, `ball/`)
+- **Paderborn University (`.mat`):** `data/paderborn/raw/` (subpastas `K001/`, `KI14/`, `KA15/`)
+- **XJTU-SY (`.csv`):** `data/xjtu_sy/raw/` (subpastas dos ensaios, ex: `35Hz12kN/`, `37.5Hz11kN/`, etc.)
+
 ---
 
 ## Guia de Uso
