@@ -164,10 +164,15 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 | **BearingCNN (Própria)** | Treino do Zero | **97.59%** | **100.00%** | ~1.2M |
 
 <p align="center">
-  <img src="docs/images/training_curves_resnet.png" width="580" alt="Curvas de Treino ResNet-18">
-  <img src="docs/images/confusion_matrix_resnet.png" width="370" alt="Matriz de Confusão ResNet-18">
+  <b>Curvas de Aprendizado (Perda e Acurácia — ResNet-18)</b><br>
+  <img src="docs/images/training_curves_resnet.png" width="750" alt="Curvas de Treino ResNet-18">
 </p>
-<p align="center"><sub>Curvas de aprendizado com checkpointing automático e Matriz de Confusão consolidada da ResNet-18 no conjunto de teste CWRU (99.83% de acurácia com apenas 4 erros em 2.368 predições).</sub></p>
+
+<p align="center">
+  <b>Matriz de Confusão no Teste Inédito (ResNet-18 — 99.83% de Acurácia)</b><br>
+  <img src="docs/images/confusion_matrix_resnet.png" width="480" alt="Matriz de Confusão ResNet-18">
+</p>
+<p align="center"><sub>Curvas de convergência de treino/validação com checkpointing automático e respectiva Matriz de Confusão da ResNet-18 no conjunto de teste do CWRU (apenas 4 erros em 2.368 predições).</sub></p>
 
 ### 2. Benchmark Paderborn University (3 Classes: Falhas Reais a 64 kHz)
 *Amostras de teste com fadiga real por estresse mecânico acelerado:*
