@@ -71,6 +71,7 @@ htmlcov/
 .DS_Store
 Thumbs.db
 *.tmp
+scratch/
 
 # ==============================================================================
 # 10. Relatórios Internos de Revisão Forense

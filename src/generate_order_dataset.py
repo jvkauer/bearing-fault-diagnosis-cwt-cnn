@@ -27,8 +27,11 @@ from src.config import (
     PADERBORN_RAW_DIR,
     ORDER_CWRU_DIR,
     ORDER_PADERBORN_DIR,
+    ORDER_XJTU_DIR,
+    XJTU_CLASSES,
     FS as CWRU_FS,
     PADERBORN_FS,
+    XJTU_FS,
     ORDER_SAMPLES_PER_REV,
     ORDER_NUM_REVS,
     ORDER_MIN,
@@ -37,6 +40,7 @@ from src.config import (
 )
 from src.dataset_cwru import load_cwru_mat_file
 from src.dataset_paderborn import load_paderborn_mat_file
+from src.dataset_xjtu import load_xjtu_csv_file, extract_xjtu_rpm, get_xjtu_manifest
 from src.order_tracking import resample_to_angle_domain, compute_order_cwt
 from src.cwt_processor import scalogram_to_rgb
 
@@ -105,6 +109,21 @@ def _compute_paderborn_global_signal_stats(max_files_per_class=10):
     return mean, std
 
 
+def _compute_xjtu_global_signal_stats(max_files_per_class=10):
+    """Calcula média e desvio padrão GLOBAIS sobre os sinais do XJTU-SY."""
+    print("[Z-SCORE] Calculando estatísticas globais do XJTU-SY...")
+    all_vals = []
+    manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
+    for cls_name, files in manifest.items():
+        for csv_file in files:
+            sig = load_xjtu_csv_file(csv_file, channel=0)
+            all_vals.append(sig)
+    all_vals = np.concatenate(all_vals)
+    mean, std = float(np.mean(all_vals)), float(np.std(all_vals))
+    print(f"    XJTU-SY global: mean={mean:.6f}, std={std:.6f} ({len(all_vals)} amostras)")
+    return mean, std
+
+
 def _cwru_order_cwt_pass1(global_mean, global_std, samples_per_file=4):
     """Calcula vmin/vmax globais amostrando chunks representativos do CWRU."""
     print("[PASS 1] Estimando vmin/vmax globais do CWRU Order-CWT...")
@@ -125,7 +144,7 @@ def _cwru_order_cwt_pass1(global_mean, global_std, samples_per_file=4):
 
             starts = np.linspace(0, max_starts, samples_per_file, dtype=int)
             for start in starts:
-                chunk = sig[start: start + samples_per_window_time]
+                chunk = sig[start: min(start + samples_per_window_time + 8, len(sig))]
                 ang_sig = resample_to_angle_domain(
                     chunk, CWRU_FS, rpm,
                     samples_per_rev=ORDER_SAMPLES_PER_REV,
@@ -170,7 +189,7 @@ def _paderborn_order_cwt_pass1(global_mean, global_std, max_files_per_class=10, 
 
             starts = np.linspace(0, max_starts, samples_per_file, dtype=int)
             for start in starts:
-                chunk = sig[start: start + samples_per_window_time]
+                chunk = sig[start: min(start + samples_per_window_time + 8, len(sig))]
                 ang_sig = resample_to_angle_domain(
                     chunk, PADERBORN_FS, rpm,
                     samples_per_rev=ORDER_SAMPLES_PER_REV,
@@ -188,6 +207,47 @@ def _paderborn_order_cwt_pass1(global_mean, global_std, max_files_per_class=10, 
     global_vmin = float(np.percentile(all_p1, 5))
     global_vmax = float(np.percentile(all_p99, 95))
     print(f"    Paderborn Order-CWT estimado: vmin={global_vmin:.6f}, vmax={global_vmax:.6f}")
+    return global_vmin, global_vmax
+
+
+def _xjtu_order_cwt_pass1(global_mean, global_std, max_files_per_class=10, samples_per_file=4):
+    """Calcula vmin/vmax globais amostrando chunks representativos do XJTU-SY."""
+    print("[PASS 1] Estimando vmin/vmax globais do XJTU-SY Order-CWT...")
+    all_p1, all_p99 = [], []
+    manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
+
+    for cls_name, files in manifest.items():
+        for csv_file in files:
+            rpm = extract_xjtu_rpm(csv_file)
+            sig = load_xjtu_csv_file(csv_file, channel=0)
+            sig = (sig - global_mean) / global_std
+
+            fr = rpm / 60.0
+            samples_per_window_time = int(np.ceil((ORDER_NUM_REVS / fr) * XJTU_FS))
+            max_starts = len(sig) - samples_per_window_time
+            if max_starts <= 0:
+                continue
+
+            starts = np.linspace(0, max_starts, samples_per_file, dtype=int)
+            for start in starts:
+                chunk = sig[start: min(start + samples_per_window_time + 8, len(sig))]
+                ang_sig = resample_to_angle_domain(
+                    chunk, XJTU_FS, rpm,
+                    samples_per_rev=ORDER_SAMPLES_PER_REV,
+                    num_revs=ORDER_NUM_REVS
+                )
+                cwt_mat, _ = compute_order_cwt(
+                    ang_sig,
+                    samples_per_rev=ORDER_SAMPLES_PER_REV,
+                    order_min=ORDER_MIN,
+                    order_max=ORDER_MAX
+                )
+                all_p1.append(np.percentile(cwt_mat, 1))
+                all_p99.append(np.percentile(cwt_mat, 99))
+
+    global_vmin = float(np.percentile(all_p1, 5))
+    global_vmax = float(np.percentile(all_p99, 95))
+    print(f"    XJTU-SY Order-CWT estimado: vmin={global_vmin:.6f}, vmax={global_vmax:.6f}")
     return global_vmin, global_vmax
 
 
@@ -349,12 +409,91 @@ def generate_paderborn_order_dataset(
 
             print(f"    ✅ Paderborn {cls_name:>10} ({split_name:>5}): {len(files)} arquivos -> {idx} imagens geradas")
 
-def generate_all_order_datasets(max_files_per_class: int = 10):
+    print(f"\n[+] Total de imagens Paderborn geradas em: {ORDER_PADERBORN_DIR} ({total_images} imagens)")
+
+
+def generate_xjtu_order_dataset(
+    global_mean: float,
+    global_std: float,
+    global_vmin: float,
+    global_vmax: float,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    test_ratio: float = 0.15,
+    max_files_per_class: int = 30
+):
+    """Gera escalogramas de ordens para o dataset XJTU-SY com normalização GLOBAL."""
+    print("\n" + "=" * 70)
+    print(" GERAÇÃO DO DATASET ÂNGULO-ORDEM (ORDER-CWT) — XJTU-SY [GLOBAL NORM]")
+    print(f"    {ORDER_SAMPLES_PER_REV} amostras/volta | Janela: {ORDER_NUM_REVS} voltas | Ordens: {ORDER_MIN}-{ORDER_MAX}")
+    print(f"    Z-Score: mean={global_mean:.4f}, std={global_std:.4f}")
+    print(f"    Colormap Norm: vmin={global_vmin:.6f}, vmax={global_vmax:.6f}")
+    print("=" * 70)
+
+    for split in ["train", "val", "test"]:
+        for cls_name in XJTU_CLASSES:
+            (ORDER_XJTU_DIR / split / cls_name).mkdir(parents=True, exist_ok=True)
+
+    manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
+    total_images = 0
+
+    for cls_name in XJTU_CLASSES:
+        files = manifest[cls_name]
+        temp_ratio = val_ratio + test_ratio
+        train_files, temp_files = train_test_split(
+            files, test_size=temp_ratio, random_state=RANDOM_SEED, shuffle=True
+        )
+        val_files, test_files = train_test_split(
+            temp_files, test_size=(test_ratio / temp_ratio), random_state=RANDOM_SEED, shuffle=True
+        )
+
+        splits = {"train": train_files, "val": val_files, "test": test_files}
+
+        for split_name, s_files in splits.items():
+            dest = ORDER_XJTU_DIR / split_name / cls_name
+            idx = 0
+
+            for csv_file in s_files:
+                rpm = extract_xjtu_rpm(csv_file)
+                sig = load_xjtu_csv_file(csv_file, channel=0)
+
+                # Z-score global
+                sig = (sig - global_mean) / global_std
+
+                fr = rpm / 60.0
+                samples_per_window_time = int(np.ceil((ORDER_NUM_REVS / fr) * XJTU_FS))
+                step_time = samples_per_window_time // 2
+
+                for start in range(0, len(sig) - samples_per_window_time + 1, step_time):
+                    chunk = sig[start: min(start + samples_per_window_time + 8, len(sig))]
+                    ang_sig = resample_to_angle_domain(
+                        chunk, XJTU_FS, rpm,
+                        samples_per_rev=ORDER_SAMPLES_PER_REV,
+                        num_revs=ORDER_NUM_REVS
+                    )
+                    cwt_mat, _ = compute_order_cwt(
+                        ang_sig,
+                        samples_per_rev=ORDER_SAMPLES_PER_REV,
+                        order_min=ORDER_MIN,
+                        order_max=ORDER_MAX
+                    )
+                    # Normalização GLOBAL compartilhada
+                    img = scalogram_to_rgb(cwt_mat, vmin=global_vmin, vmax=global_vmax)
+                    img.save(str(dest / f"{cls_name}_{split_name}_{idx:05d}.png"), format="PNG")
+                    idx += 1
+                    total_images += 1
+
+            print(f"    ✅ XJTU-SY {cls_name:>10} ({split_name:>5}): {len(s_files)} arquivos -> {idx} imagens geradas")
+
+    print(f"\n[+] Total de imagens XJTU-SY geradas em: {ORDER_XJTU_DIR} ({total_images} imagens)")
+
+
+def generate_all_order_datasets(max_files_per_class: int = 10, include_xjtu: bool = True):
     """
-    Pipeline completo de geração dos datasets Order-CWT para CWRU e Paderborn:
+    Pipeline completo de geração dos datasets Order-CWT para CWRU, Paderborn e XJTU-SY:
     1. Z-Score Global dos sinais 1D
-    2. Estimativa Amostrada de vmin/vmax globais compartilhados
-    3. Geração e gravação dos escalogramas PNG com normalização global
+    2. Estimativa Amostrada de vmin/vmax globais compartilhados entre todos os datasets
+    3. Geração e gravação dos escalogramas PNG com normalização global unificada
     """
     cwru_mean, cwru_std = _compute_cwru_global_signal_stats()
     pad_mean, pad_std = _compute_paderborn_global_signal_stats(max_files_per_class=max_files_per_class)
@@ -362,13 +501,24 @@ def generate_all_order_datasets(max_files_per_class: int = 10):
     cwru_vmin, cwru_vmax = _cwru_order_cwt_pass1(cwru_mean, cwru_std, samples_per_file=4)
     pad_vmin, pad_vmax = _paderborn_order_cwt_pass1(pad_mean, pad_std, max_files_per_class=max_files_per_class, samples_per_file=4)
 
-    shared_vmin = min(cwru_vmin, pad_vmin)
-    shared_vmax = max(cwru_vmax, pad_vmax)
-    print(f"\n[GLOBAL COMPARTILHADO] vmin={shared_vmin:.6f}, vmax={shared_vmax:.6f}\n")
+    all_vmins = [cwru_vmin, pad_vmin]
+    all_vmaxs = [cwru_vmax, pad_vmax]
+
+    if include_xjtu:
+        xjtu_mean, xjtu_std = _compute_xjtu_global_signal_stats(max_files_per_class=max_files_per_class)
+        xjtu_vmin, xjtu_vmax = _xjtu_order_cwt_pass1(xjtu_mean, xjtu_std, max_files_per_class=max_files_per_class, samples_per_file=4)
+        all_vmins.append(xjtu_vmin)
+        all_vmaxs.append(xjtu_vmax)
+
+    shared_vmin = min(all_vmins)
+    shared_vmax = max(all_vmaxs)
+    print(f"\n[GLOBAL COMPARTILHADO TRIPARTITE] vmin={shared_vmin:.6f}, vmax={shared_vmax:.6f}\n")
 
     generate_cwru_order_dataset(cwru_mean, cwru_std, shared_vmin, shared_vmax)
     generate_paderborn_order_dataset(pad_mean, pad_std, shared_vmin, shared_vmax, max_files_per_class=max_files_per_class)
+    if include_xjtu:
+        generate_xjtu_order_dataset(xjtu_mean, xjtu_std, shared_vmin, shared_vmax, max_files_per_class=30)
 
 
 if __name__ == "__main__":
-    generate_all_order_datasets(max_files_per_class=10)
+    generate_all_order_datasets(max_files_per_class=10, include_xjtu=True)

@@ -83,10 +83,24 @@ PADERBORN_FREQ_MAX = 20_000   # Hz (faixa estendida de alta frequência)
 ORDER_TRACKING_DIR = DATA_DIR / "order_tracking"
 ORDER_CWRU_DIR = ORDER_TRACKING_DIR / "cwru"
 ORDER_PADERBORN_DIR = ORDER_TRACKING_DIR / "paderborn"
+ORDER_XJTU_DIR = ORDER_TRACKING_DIR / "xjtu"
 
 ORDER_SAMPLES_PER_REV = 1024  # Amostras uniformes por volta do eixo
 ORDER_NUM_REVS = 4            # Janela de 4 voltas completas do eixo
 ORDER_MIN = 0.5               # Ordem mínima (0.5x da rotação do eixo)
 ORDER_MAX = 15.0              # Ordem máxima (15x da rotação do eixo)
+
+# ==============================================================================
+# 7. Parâmetros do Dataset XJTU-SY
+# ==============================================================================
+XJTU_DIR = DATA_DIR / "xjtu"
+XJTU_RAW_DIR = XJTU_DIR / "raw"
+XJTU_PROCESSED_DIR = XJTU_DIR / "processed"
+XJTU_CLASSES = ["normal", "inner_race", "outer_race"]
+XJTU_FS = 25_600         # Taxa de amostragem de 25.6 kHz
+XJTU_WINDOW_SIZE = 2048  # Comprimento da janela (~80 ms / ~2.8 voltas do eixo)
+XJTU_STEP_SIZE = 1024    # Passo do janelamento (50% de overlap)
+XJTU_FREQ_MIN = 10       # Hz
+XJTU_FREQ_MAX = 10_000   # Hz
 
 
