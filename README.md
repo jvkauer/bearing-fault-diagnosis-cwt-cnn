@@ -101,15 +101,12 @@ Ao aplicar a CWT no domínio angular, o eixo vertical passa de frequências em H
 
 ## Escalogramas por Classe
 
-Cada topologia de falha gera padrões visuais e assinaturas de textura singulares no escalograma bidimensional:
+Cada topologia de falha gera padrões espectrais e assinaturas de textura singulares no escalograma bidimensional:
 
 <p align="center">
-  <img src="docs/images/scalogram_normal.png" width="180" alt="Normal">
-  <img src="docs/images/scalogram_inner_race.png" width="180" alt="Pista Interna">
-  <img src="docs/images/scalogram_outer_race.png" width="180" alt="Pista Externa">
-  <img src="docs/images/scalogram_ball.png" width="180" alt="Esfera">
+  <img src="docs/images/scalograms_per_class_with_axes.png" width="850" alt="Escalogramas CWT por Classe com Eixos">
 </p>
-<p align="center"><sub>Da esquerda para a direita: Condição Normal (baixa densidade espectral), Falha na Pista Interna (impactos periódicos de alta frequência modulados pela rotação do eixo), Falha na Pista Externa (pulsos uniformes de alta energia) e Falha na Esfera (modulação dupla por rotação de gaiola e giro da esfera).</sub></p>
+<p align="center"><sub>Escalogramas CWT no padrão de publicação acadêmica (janelas de 85,3 ms a 12 kHz, ~1.797 RPM): (a) Condição Normal (baixa densidade espectral e ausência de impactos periódicos); (b) Falha na Pista Interna (impactos periódicos de alta frequência excitando a ressonância estrutural em ~3.000–4.500 Hz modulados pela rotação do eixo); (c) Falha na Pista Externa (pulsos periódicos repetitivos bem definidos na frequência BPFO); e (d) Falha na Esfera (modulação complexa decorrente do giro do elemento rolante e rotação da gaiola).</sub></p>
 
 ---
 
