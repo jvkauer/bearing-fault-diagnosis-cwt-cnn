@@ -301,13 +301,36 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Estruturação dos Dados Brutos
+### Obtenção e Estruturação dos Dados Brutos
 
-Como o diretório `data/` é ignorado pelo Git (para proteger o repositório contra arquivos pesados), ao clonar o projeto posicione os dados originais nas seguintes pastas:
+Como o diretório `data/` é protegido e ignorado pelo Git (definido no `.gitignore` para manter o repositório leve e evitar arquivos binários pesados), após clonar o projeto crie a pasta `data/` e posicione os dados originais baixados das fontes oficiais na seguinte estrutura:
 
-- **CWRU (`.mat`):** `data/cwru/` (subpastas `normal/`, `inner_race/`, `outer_race/`, `ball/`)
-- **Paderborn University (`.mat`):** `data/paderborn/raw/` (subpastas `K001/`, `KI14/`, `KA15/`)
-- **XJTU-SY (`.csv`):** `data/xjtu_sy/raw/` (subpastas dos ensaios, ex: `35Hz12kN/`, `37.5Hz11kN/`, etc.)
+```text
+data/
+├── cwru/
+│   ├── normal/        # Arquivos .mat (ex: 97.mat, 98.mat, 99.mat, 100.mat)
+│   ├── inner_race/    # Arquivos .mat de falha na pista interna (ex: 105.mat, 169.mat, ...)
+│   ├── outer_race/    # Arquivos .mat de falha na pista externa (ex: 130.mat, 197.mat, ...)
+│   └── ball/          # Arquivos .mat de falha no elemento rolante (ex: 118.mat, 185.mat, ...)
+├── paderborn/
+│   └── raw/
+│       ├── K001/      # Arquivos .mat de rolamento saudável (ex: N09_M07_F10_K001_1.mat, ...)
+│       ├── KI14/      # Arquivos .mat de dano real na pista interna (ex: N09_M07_F10_KI14_1.mat, ...)
+│       └── KA15/      # Arquivos .mat de dano real na pista externa (ex: N09_M07_F10_KA15_1.mat, ...)
+└── xjtu/
+    └── raw/
+        ├── 35Hz12kN/  # Pastas Bearing1_1/, Bearing1_2/, Bearing1_3/ com arquivos .csv
+        ├── 37.5Hz11kN/# Pastas Bearing2_1/, Bearing2_2/, Bearing2_5/ com arquivos .csv
+        └── 40Hz10kN/  # Pastas Bearing3_4/, etc. com arquivos .csv
+```
+
+#### Links Oficiais para Download
+
+| Dataset | Fonte Oficial / Repositório | Descrição dos Dados |
+|---|---|---|
+| **CWRU** | [Case Western Reserve Bearing Data Center](https://engineering.case.edu/bearingdatacenter) | Acelerômetro *Drive End* (12 kHz) sob 0 a 3 HP de carga (1.797 a 1.730 RPM). |
+| **Paderborn University** | [Paderborn Bearing Data Center (KAT)](https://mb.uni-paderborn.de/kat/forschung/datacenter/bearing-datacenter) | Sinais de vibração a 64 kHz com falhas reais de fadiga acelerada (K001, KI14, KA15). |
+| **XJTU-SY** | [XJTU-SY Bearing Dataset (GitHub)](https://github.com/cathysiyu/XJTU-SY-bearing-datasets) | Ensaios completos de vida útil (*run-to-failure*) a 25.6 kHz sob diferentes rotações. |
 
 ---
 
