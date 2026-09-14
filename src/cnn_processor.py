@@ -18,6 +18,7 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 import numpy as np
+import random
 
 from src.config import (
     PROCESSED_DATA_DIR,
@@ -27,13 +28,22 @@ from src.config import (
     NUM_CLASSES,
     DROPOUT_RATE,
     IMG_HEIGHT,
-    IMG_WIDTH
+    IMG_WIDTH,
+    RANDOM_SEED,
+    set_seed
 )
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 def get_data_loaders(
     batch_size: int = BATCH_SIZE,
-    data_dir: Path = PROCESSED_DATA_DIR
+    data_dir: Path = PROCESSED_DATA_DIR,
+    seed: int = RANDOM_SEED
 ) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
     Carrega os datasets de escalogramas CWT salvos em data_dir (train, val, test)
@@ -42,6 +52,7 @@ def get_data_loaders(
     Args:
         batch_size (int): Tamanho do lote (padrão definido em config.py).
         data_dir (Path): Diretório raiz dos dados processados contendo train/, val/ e test/.
+        seed (int): Semente pseudoaleatória para o gerador do DataLoader.
 
     Returns:
         Tuple contendo (train_loader, val_loader, test_loader, classes).
@@ -65,12 +76,32 @@ def get_data_loaders(
 
     use_pin_memory = torch.cuda.is_available()
 
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True,
-                              num_workers=2, pin_memory=use_pin_memory)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False,
-                            num_workers=2, pin_memory=use_pin_memory)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False,
-                             num_workers=2, pin_memory=use_pin_memory)
+    g = torch.Generator()
+    g.manual_seed(seed)
+
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=2,
+        pin_memory=use_pin_memory,
+        generator=g,
+        worker_init_fn=seed_worker
+    )
+    val_loader = DataLoader(
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=2,
+        pin_memory=use_pin_memory
+    )
+    test_loader = DataLoader(
+        dataset=test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=2,
+        pin_memory=use_pin_memory
+    )
 
     return train_loader, val_loader, test_loader, train_dataset.classes
 
@@ -130,7 +161,8 @@ def train_and_evaluate_bearing_cnn(
     num_epochs: int = NUM_EPOCHS,
     lr: float = LEARNING_RATE,
     data_dir: Path = PROCESSED_DATA_DIR,
-    checkpoint_name: str = "checkpoint_bearing_cnn_best.pth"
+    checkpoint_name: str = "checkpoint_bearing_cnn_best.pth",
+    seed: int = RANDOM_SEED
 ) -> Dict[str, Any]:
     """
     Treina e avalia a arquitetura BearingCNN personalizada com checkpointing
@@ -141,13 +173,15 @@ def train_and_evaluate_bearing_cnn(
         lr (float): Taxa de aprendizado do otimizador Adam.
         data_dir (Path): Diretório dos dados processados (train, val, test).
         checkpoint_name (str): Nome do arquivo para salvar o checkpoint.
+        seed (int): Semente para determinismo total (pesos, DataLoader e otimizador).
 
     Returns:
         Dict contendo: model_name, history (train/val loss e acc),
         best_val_acc, test_acc, test_preds, test_labels, classes.
     """
+    set_seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader, test_loader, classes = get_data_loaders(BATCH_SIZE, data_dir=data_dir)
+    train_loader, val_loader, test_loader, classes = get_data_loaders(BATCH_SIZE, data_dir=data_dir, seed=seed)
     
     model = BearingCNN(num_classes=len(classes)).to(device)
     criterion = nn.CrossEntropyLoss()

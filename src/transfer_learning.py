@@ -19,20 +19,31 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 import numpy as np
+import random
 
 from src.config import (
     PROCESSED_DATA_DIR,
     BATCH_SIZE,
     NUM_EPOCHS,
     LEARNING_RATE,
-    NUM_CLASSES
+    NUM_CLASSES,
+    DROPOUT_RATE,
+    RANDOM_SEED,
+    set_seed
 )
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 def get_transfer_dataloaders(
     img_size: int = 224,
     batch_size: int = BATCH_SIZE,
-    data_dir: Path = PROCESSED_DATA_DIR
+    data_dir: Path = PROCESSED_DATA_DIR,
+    seed: int = RANDOM_SEED
 ) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
     Retorna DataLoaders com o tamanho de imagem específico do modelo (224x224 ou 299x299).
@@ -41,6 +52,7 @@ def get_transfer_dataloaders(
         img_size (int): Dimensão espacial de entrada da rede (224 ou 299).
         batch_size (int): Tamanho do lote.
         data_dir (Path): Diretório raiz dos dados processados (contendo train, val, test).
+        seed (int): Semente pseudoaleatória para os DataLoaders.
 
     Returns:
         Tuple contendo (train_loader, val_loader, test_loader, classes).
@@ -64,17 +76,42 @@ def get_transfer_dataloaders(
 
     use_pin_memory = torch.cuda.is_available()
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
-                              num_workers=2, pin_memory=use_pin_memory)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
-                            num_workers=2, pin_memory=use_pin_memory)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False,
-                             num_workers=2, pin_memory=use_pin_memory)
+    g = torch.Generator()
+    g.manual_seed(seed)
+
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=2,
+        pin_memory=use_pin_memory,
+        generator=g,
+        worker_init_fn=seed_worker
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=2,
+        pin_memory=use_pin_memory
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=2,
+        pin_memory=use_pin_memory
+    )
     
     return train_loader, val_loader, test_loader, train_ds.classes
 
 
-def build_transfer_model(model_name: str, num_classes: int = NUM_CLASSES, freeze_backbone: bool = True) -> Tuple[nn.Module, int]:
+def build_transfer_model(
+    model_name: str,
+    num_classes: int = NUM_CLASSES,
+    freeze_backbone: bool = True,
+    dropout_rate: float = DROPOUT_RATE
+) -> Tuple[nn.Module, int]:
     """
     Constrói e adapta modelos pré-treinados no ImageNet para a classificação do CWRU.
 
@@ -82,6 +119,7 @@ def build_transfer_model(model_name: str, num_classes: int = NUM_CLASSES, freeze
         model_name (str): Nome do modelo ('resnet18', 'inception_v3', 'efficientnet_b0').
         num_classes (int): Número de classes de saída.
         freeze_backbone (bool): Se True, congela os pesos do backbone pré-treinado.
+        dropout_rate (float): Taxa de dropout para a camada de classificação (padrão em config.py).
 
     Returns:
         Tuple contendo (model, img_size) — modelo adaptado e tamanho de entrada.
@@ -94,7 +132,7 @@ def build_transfer_model(model_name: str, num_classes: int = NUM_CLASSES, freeze
             for param in model.parameters():
                 param.requires_grad = False
         in_features = model.fc.in_features
-        model.fc = nn.Sequential(nn.Dropout(0.5), nn.Linear(in_features, num_classes))
+        model.fc = nn.Sequential(nn.Dropout(dropout_rate), nn.Linear(in_features, num_classes))
         img_size = 224
         
     elif model_name == "inception_v3":
@@ -105,7 +143,7 @@ def build_transfer_model(model_name: str, num_classes: int = NUM_CLASSES, freeze
             for param in model.parameters():
                 param.requires_grad = False
         in_features = model.fc.in_features
-        model.fc = nn.Sequential(nn.Dropout(0.5), nn.Linear(in_features, num_classes))
+        model.fc = nn.Sequential(nn.Dropout(dropout_rate), nn.Linear(in_features, num_classes))
         img_size = 299
         
     elif model_name == "efficientnet_b0":
@@ -114,7 +152,7 @@ def build_transfer_model(model_name: str, num_classes: int = NUM_CLASSES, freeze
             for param in model.parameters():
                 param.requires_grad = False
         in_features = model.classifier[1].in_features
-        model.classifier = nn.Sequential(nn.Dropout(0.5), nn.Linear(in_features, num_classes))
+        model.classifier = nn.Sequential(nn.Dropout(dropout_rate), nn.Linear(in_features, num_classes))
         img_size = 224
     else:
         raise ValueError(f"Modelo '{model_name}' não suportado.")
@@ -127,8 +165,10 @@ def train_and_evaluate_transfer_model(
     num_epochs: int = NUM_EPOCHS,
     lr: float = LEARNING_RATE,
     freeze: bool = True,
+    dropout_rate: float = DROPOUT_RATE,
     data_dir: Path = PROCESSED_DATA_DIR,
-    checkpoint_prefix: str = "checkpoint"
+    checkpoint_prefix: str = "checkpoint",
+    seed: int = RANDOM_SEED
 ) -> Dict[str, Any]:
     """
     Treina e avalia modelos de Transfer Learning com checkpointing automático
@@ -139,19 +179,26 @@ def train_and_evaluate_transfer_model(
         num_epochs (int): Número de épocas de treinamento.
         lr (float): Taxa de aprendizado do otimizador Adam.
         freeze (bool): Se True, congela o backbone (feature extraction).
+        dropout_rate (float): Taxa de dropout na camada de classificação.
         data_dir (Path): Diretório dos dados processados (train, val, test).
         checkpoint_prefix (str): Prefixo do arquivo de checkpoint salvo.
+        seed (int): Semente para determinismo total (pesos, DataLoader e otimizador).
 
     Returns:
         Dict contendo: model_name, history (train/val loss e acc),
         best_val_acc, test_acc, test_preds, test_labels, classes.
     """
+    set_seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     img_size = 299 if model_name == "inception_v3" else 224
     
-    train_loader, val_loader, test_loader, classes = get_transfer_dataloaders(img_size=img_size, data_dir=data_dir)
+    train_loader, val_loader, test_loader, classes = get_transfer_dataloaders(
+        img_size=img_size, data_dir=data_dir, seed=seed
+    )
     
-    model, _ = build_transfer_model(model_name, num_classes=len(classes), freeze_backbone=freeze)
+    model, _ = build_transfer_model(
+        model_name, num_classes=len(classes), freeze_backbone=freeze, dropout_rate=dropout_rate
+    )
     model = model.to(device)
     
     criterion = nn.CrossEntropyLoss()

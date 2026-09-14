@@ -55,12 +55,32 @@ IMG_WIDTH = 224     # pixels (largura/tempo)
 # 4. Hiperparâmetros do Modelo e Treinamento da CNN
 # ==============================================================================
 BATCH_SIZE = 32
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.00005  # 5e-5 (ponto ótimo determinado no estudo de ablação)
 NUM_EPOCHS = 10
-DROPOUT_RATE = 0.5
+DROPOUT_RATE = 0.3       # 0.3 (preserva harmônicos espectrais na camada de classificação)
 
 # Seed para reprodutibilidade dos experimentos
 RANDOM_SEED = 42
+
+def set_seed(seed: int = RANDOM_SEED) -> None:
+    """
+    Fixa a semente para garantir reprodutibilidade completa no PyTorch, NumPy e Python.
+    """
+    import os
+    import random
+    import numpy as np
+    import torch
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
 
 # ==============================================================================
 # 5. Parâmetros do Dataset Paderborn (PU Dataset)
