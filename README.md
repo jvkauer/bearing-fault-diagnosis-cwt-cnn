@@ -158,10 +158,10 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 
 | Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
 |---|---|:---:|:---:|:---:|
-| **ResNet18** | Fine-Tuning (`Freeze=False`) | **99.83%** | **100.00%** | ~11.1M |
-| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **98.48%** | **100.00%** | ~5.3M |
-| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **97.93%** | **100.00%** | ~23.8M |
-| **BearingCNN (Própria)** | Treino do Zero | **97.59%** | **100.00%** | ~1.2M |
+| **ResNet18** | Fine-Tuning (`Freeze=False`) | **99.87%** | **100.00%** | ~11.1M |
+| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **98.86%** | **100.00%** | ~5.3M |
+| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **96.92%** | **100.00%** | ~23.8M |
+| **BearingCNN (Própria)** | Treino do Zero | **95.69%** | **100.00%** | ~1.2M |
 
 <p align="center">
   <b>Curvas de Aprendizado (Perda e Acurácia — ResNet-18)</b><br>
@@ -169,21 +169,24 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 </p>
 
 <p align="center">
-  <b>Matriz de Confusão no Teste Inédito (ResNet-18 — 99.83% de Acurácia)</b><br>
+  <b>Matriz de Confusão no Teste Inédito (ResNet-18 — 99.87% de Acurácia)</b><br>
   <img src="docs/images/confusion_matrix_resnet.png" width="480" alt="Matriz de Confusão ResNet-18">
 </p>
-<p align="center"><sub>Curvas de convergência de treino/validação com checkpointing automático e respectiva Matriz de Confusão da ResNet-18 no conjunto de teste do CWRU (apenas 4 erros em 2.368 predições).</sub></p>
+<p align="center"><sub>Curvas de convergência de treino/validação com checkpointing automático e respectiva Matriz de Confusão da ResNet-18 no conjunto de teste do CWRU (apenas 3 erros em 2.368 predições).</sub></p>
 
 ### 2. Benchmark Paderborn University (3 Classes: Falhas Reais a 64 kHz)
-*Amostras de teste com fadiga real por estresse mecânico acelerado:*
-- **BearingCNN:** **100.00%** de acurácia no teste (`val_loss: 0.0024`).
+*Amostras de teste com fadiga real por estresse mecânico acelerado (1.116 amostras):*
+- **BearingCNN:** **99.91%** de acurácia no teste (`val_loss: 0.0024`, apenas 1 erro em 1.116 amostras).
 - **ResNet-18:** **100.00%** de acurácia no teste.
+- **EfficientNet-B0:** **100.00%** de acurácia no teste.
+- **Inception-v3:** **100.00%** de acurácia no teste.
 
 ### 3. Benchmark XJTU-SY (3 Classes: Degradação Acelerada a 25.6 kHz)
-*Amostras de teste obtidas em ensaios contínuos de run-to-failure:*
+*Amostras de teste obtidas em ensaios contínuos de run-to-failure (465 amostras):*
 - **BearingCNN:** **100.00%** de acurácia no teste.
 - **ResNet-18:** **100.00%** de acurácia no teste.
 - **EfficientNet-B0:** **100.00%** de acurácia no teste.
+- **Inception-v3:** **100.00%** de acurácia no teste.
 
 ---
 
@@ -218,7 +221,7 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 | **CWRU $\rightarrow$ XJTU-SY** | 33.33% | **37.23%** | $+3.90\text{ p.p.}$ ($+11.7\%$) |
 | **XJTU-SY $\rightarrow$ Paderborn** | 17.65% | **29.89%** | $+12.24\text{ p.p.}$ ($+69.3\%$) |
 | **XJTU-SY $\rightarrow$ CWRU** | 27.81% | **25.32%** | $-2.49\text{ p.p.}$ |
-| **Paderborn $\rightarrow$ XJTU-SY** | 30.32% | **4.62%** | $-25.70\text{ p.p.}$ |
+| **Paderborn $\rightarrow$ XJTU-SY** | 30.32% | **0.31%** | $-30.01\text{ p.p.}$ |
 
 <p align="center">
   <img src="docs/images/order_tracking_cross_domain_comparison.png" width="700" alt="Comparativo Cross-Domain Order-CWT vs CWT">
@@ -435,13 +438,13 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 
 - [x] Fundamentação teórica de sinais não estacionários (CWT vs. STFT vs. FFT)
 - [x] Pipeline de pré-processamento e geração de escalogramas 2D com particionamento estrito sem *Data Leakage*
-- [x] Desenvolvimento da arquitetura própria `BearingCNN` (**97.59%** CWRU, **100%** Paderborn, **100%** XJTU-SY)
-- [x] Benchmark de *Transfer Learning* com ResNet-18, EfficientNet-B0 e Inception-v3 (**99.83%** CWRU)
+- [x] Desenvolvimento da arquitetura própria `BearingCNN` (**95.69%** CWRU, **99.91%** Paderborn, **100.00%** XJTU-SY)
+- [x] Benchmark de *Transfer Learning* com ResNet-18, EfficientNet-B0 e Inception-v3 (**99.87%** CWRU)
 - [x] Diagnóstico binário de integridade com **100.00%** de precisão e recall (zero falsos alarmes e zero falsos negativos)
 - [x] Integração de bancos de dados com falhas reais de fadiga acelerada (Paderborn University e XJTU-SY)
 - [x] Estudo experimental e caracterização da barreira de *Domain Shift* em avaliação cruzada zero-shot
 - [x] Implementação de *Computed Order Tracking* (COT) e Transformada Wavelet em Ângulo-Ordem (Order-CWT)
-- [x] Metodologia de *Few-Shot Domain Adaptation* demonstrando recuperação da acurácia (>98%) com calibração rápida ($k=1$ a $k=5$)
+- [x] Metodologia de *Few-Shot Domain Adaptation* demonstrando recuperação da acurácia (até **100.00%** e média de **84.38%**) com calibração rápida ($K=1$ a $K=5$)
 - [x] Documentação técnica completa e sincronização do repositório acadêmico
 
 ---
