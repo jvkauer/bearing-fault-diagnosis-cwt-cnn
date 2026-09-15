@@ -211,21 +211,21 @@ Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero
 
 Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (COT), neutraliza-se o efeito da velocidade de rotação (RPM). O impacto é expressivo no par **CWRU $\leftrightarrow$ Paderborn**:
 
-| Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Ganho Relativo |
+| Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Variação Absoluta |
 |---|:---:|:---:|:---:|
-| **CWRU $\rightarrow$ Paderborn** | 32.44% | **66.67%** | **+105% (mais que o dobro!)** |
-| **Paderborn $\rightarrow$ CWRU** | 24.17% | **69.35%** | **+186% (quase o triplo!)** |
-| **CWRU $\rightarrow$ XJTU-SY** | 33.33% | **37.23%** | $+11.7\%$ |
-| **XJTU-SY $\rightarrow$ Paderborn** | 17.65% | **29.89%** | $+69.3\%$ |
-| **XJTU-SY $\rightarrow$ CWRU** | 27.81% | **25.32%** | $-8.9\%$ |
-| **Paderborn $\rightarrow$ XJTU-SY** | 30.32% | **4.62%** | *Colapso por shift de carga* |
+| **CWRU $\rightarrow$ Paderborn** | 32.44% | **66.67%** | $+34.23\text{ p.p.}$ ($+105.5\%$) |
+| **Paderborn $\rightarrow$ CWRU** | 24.17% | **69.35%** | $+45.18\text{ p.p.}$ ($+186.9\%$) |
+| **CWRU $\rightarrow$ XJTU-SY** | 33.33% | **37.23%** | $+3.90\text{ p.p.}$ ($+11.7\%$) |
+| **XJTU-SY $\rightarrow$ Paderborn** | 17.65% | **29.89%** | $+12.24\text{ p.p.}$ ($+69.3\%$) |
+| **XJTU-SY $\rightarrow$ CWRU** | 27.81% | **25.32%** | $-2.49\text{ p.p.}$ |
+| **Paderborn $\rightarrow$ XJTU-SY** | 30.32% | **4.62%** | $-25.70\text{ p.p.}$ |
 
 <p align="center">
   <img src="docs/images/order_tracking_cross_domain_comparison.png" width="700" alt="Comparativo Cross-Domain Order-CWT vs CWT">
 </p>
 
 > [!NOTE]
-> **Por que o Order-CWT salta para quase 70% no CWRU $\leftrightarrow$ Paderborn, mas sofre no Paderborn $\rightarrow$ XJTU-SY?**  
+> **Comportamento Físico e Disparidade Operacional:**  
 > O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a 2.400 RPM**, enquanto o Paderborn opera a 900 RPM com carga nominal leve. A vibração normal sob 12 kN possui energia superior à falha de pista do Paderborn, gerando um deslocamento de escala de amplitude. Esse fenômeno delimita a fronteira física da técnica e fundamenta a necessidade de calibração por *Few-Shot Learning*.
 
 ---
@@ -234,15 +234,15 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe da máquina-alvo, a ResNet-18 ajusta seus pesos da camada final em apenas 5 épocas:
 
-| Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Recuperação / Ganho |
+| Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Variação ($K=0 \rightarrow K=5$) |
 |---|:---:|:---:|:---:|:---:|
-| **CWRU $\rightarrow$ Paderborn** | 64.94% | 72.99% | **75.29%** | $+10.35\%$ |
-| **Paderborn $\rightarrow$ CWRU** | 74.51% | 46.49% | **79.73%** | $+5.22\%$ |
-| **CWRU $\rightarrow$ XJTU-SY** | 36.92% | 70.77% | **100.00%** | **Perfeita (100%)** |
-| **XJTU-SY $\rightarrow$ CWRU** | 25.32% | 58.78% | **79.19%** | $+53.87\%$ |
-| **Paderborn $\rightarrow$ XJTU-SY** | 4.62% | 76.92% | **99.08%** | **Salto de $+94.46\%$!** |
-| **XJTU-SY $\rightarrow$ Paderborn** | 32.18% | 32.76% | **72.99%** | $+40.81\%$ |
-| **MÉDIA TRIPARTITE** | **39.75%** | **59.79%** | **84.38%** | **$+44.63\%$ de ganho médio** |
+| **CWRU $\rightarrow$ Paderborn** | 64.94% | 72.99% | **75.29%** | $+10.35\text{ p.p.}$ |
+| **Paderborn $\rightarrow$ CWRU** | 74.51% | 46.49% | **79.73%** | $+5.22\text{ p.p.}$ |
+| **CWRU $\rightarrow$ XJTU-SY** | 36.92% | 70.77% | **100.00%** | $+63.08\text{ p.p.}$ |
+| **XJTU-SY $\rightarrow$ CWRU** | 25.32% | 58.78% | **79.19%** | $+53.87\text{ p.p.}$ |
+| **Paderborn $\rightarrow$ XJTU-SY** | 4.62% | 76.92% | **99.08%** | $+94.46\text{ p.p.}$ |
+| **XJTU-SY $\rightarrow$ Paderborn** | 32.18% | 32.76% | **72.99%** | $+40.81\text{ p.p.}$ |
+| **MÉDIA TRIPARTITE** | **39.75%** | **59.79%** | **84.38%** | **$+44.63\text{ p.p.}$** |
 
 <p align="center">
   <img src="docs/images/one_shot_tripartite_full_comparison.png" width="850" alt="Evolução Few-Shot Tripartite">
@@ -412,7 +412,7 @@ Para reproduzir visualmente cada etapa (curvas de convergência, matrizes de con
 | Arquitetura | Profundidade | Parâmetros | Mecanismo Central e Justificativa |
 |---|:---:|:---:|---|
 | **BearingCNN** | 4 blocos conv | ~1.2M | Rede customizada projetada especificamente para o problema, leve e adequada para *Edge AI*. |
-| **ResNet-18** | 18 camadas | ~11.1M | **Modelo Campeão:** Conexões residuais (*skip connections*) que preservam linhas finas de ordem e harmônicos transitórios. |
+| **ResNet-18** | 18 camadas | ~11.1M | **Melhor Desempenho Global:** Conexões residuais (*skip connections*) que preservam linhas finas de ordem e harmônicos transitórios. |
 | **EfficientNet-B0** | Composta | ~5.3M | Escalonamento composto balanceado entre profundidade, largura e resolução com baixa demanda de memória. |
 | **Inception-v3** | 42 camadas | ~23.8M | Convoluções paralelas multiescala que capturam assinaturas de impacto em janelas de tempo de diferentes tamanhos. |
 
