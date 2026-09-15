@@ -189,40 +189,70 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 
 ## Avaliação Cruzada e Análise de Domain Shift (Cross-Domain)
 
-Apesar dos resultados quase perfeitos obtidos em cada bancada individualmente, a transferência direta (*Zero-Shot Cross-Domain*) de um modelo treinado em um banco de dados para outro sofre com severa degradação:
+Apesar dos resultados quase perfeitos obtidos em cada bancada individualmente (In-Domain > 99%), a transferência direta (*Zero-Shot Cross-Domain*) de um modelo treinado em um banco de dados para outro sofre com severa degradação devido a variações de velocidade (RPM), diâmetro de rolamento e condições de carga.
 
-| Cenário de Teste (Zero-Shot) | Domínio | Acurácia Cruzada | Modo de Falha / Comportamento Observado |
-|---|:---:|:---:|---|
-| **CWRU $\rightarrow$ Paderborn** | Tempo-Frequência | **10.62%** | Colapso de modo: classificador prevê `ball` em virtude da alta frequência do ruído a 64 kHz |
-| **Paderborn $\rightarrow$ CWRU** | Tempo-Frequência | **25.00%** | Colapso de modo: modelo treinado a 900 RPM enxerga CWRU (1797 RPM) com frequências dobradas |
-| **CWRU $\rightarrow$ Paderborn** | Ângulo-Ordem (COT) | **33.33%** | Alinhamento do RPM, porém limitado pela disparidade geométrica (BPFI 5.41 vs 4.95 ordens) |
-| **Paderborn $\leftrightarrow$ XJTU-SY** | Ângulo-Ordem (COT) | **~50% – 70%** | Alinhamento geométrico perfeito (8 esferas), com interferência da função de resposta estrutural das carcaças |
+### 1. Matriz de Domain Shift no Tempo-Frequência (CWT Tradicional)
+Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero-Shot*):
+
+| Origem (Treino) | Destino: CWRU (12 kHz) | Destino: Paderborn (64 kHz) | Destino: XJTU-SY (25.6 kHz) |
+|---|:---:|:---:|:---:|
+| **CWRU** | *99.87% (In-Domain)* | **32.44%** | **33.33%** |
+| **Paderborn** | **24.17%** | *100.00% (In-Domain)* | **30.32%** |
+| **XJTU-SY** | **27.81%** | **17.65%** | *100.00% (In-Domain)* |
 
 <p align="center">
-  <img src="docs/images/order_tracking_cross_domain_comparison.png" width="700" alt="Comparativo Cross-Domain">
+  <img src="docs/images/cross_domain_matrix_heatmap.png" width="550" alt="Heatmap da Matriz de Domain Shift Cross-Domain">
+</p>
+<p align="center"><sub>Matriz de transferência cruzada 3x3 no domínio Tempo-Frequência: a diagonal principal exibe a excelência in-domain, enquanto os elementos fora da diagonal revelam a severa barreira de Domain Shift (queda para a faixa de 17% a 33%).</sub></p>
+
+---
+
+### 2. Avaliação Cruzada no Domínio Ângulo-Ordem (Order-CWT)
+
+Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (COT), neutraliza-se o efeito da velocidade de rotação (RPM). O impacto é expressivo no par **CWRU $\leftrightarrow$ Paderborn**:
+
+| Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Ganho Relativo |
+|---|:---:|:---:|:---:|
+| **CWRU $\rightarrow$ Paderborn** | 32.44% | **66.67%** | **+105% (mais que o dobro!)** |
+| **Paderborn $\rightarrow$ CWRU** | 24.17% | **69.35%** | **+186% (quase o triplo!)** |
+| **CWRU $\rightarrow$ XJTU-SY** | 33.33% | **37.23%** | $+11.7\%$ |
+| **XJTU-SY $\rightarrow$ Paderborn** | 17.65% | **29.89%** | $+69.3\%$ |
+| **XJTU-SY $\rightarrow$ CWRU** | 27.81% | **25.32%** | $-8.9\%$ |
+| **Paderborn $\rightarrow$ XJTU-SY** | 30.32% | **4.62%** | *Colapso por shift de carga* |
+
+<p align="center">
+  <img src="docs/images/order_tracking_cross_domain_comparison.png" width="700" alt="Comparativo Cross-Domain Order-CWT vs CWT">
 </p>
 
-### Principais Fatores Físicos do Domain Shift:
-1. **Diferença de Velocidade (RPM):** O impacto ocorre em intervalos temporais distintos. O *Order Tracking* elimina integralmente este fator.
-2. **Diferença Geométrica:** Rolamentos com diâmetros e contagens de esferas distintas possuem ordens fundamentais diferentes.
-3. **Assinatura Espectral Real vs. Artificial:** Falhas artificiais (EDM/laser) geram pulsos Dirac impulsivos secos; falhas reais de fadiga produzem espalhamento acústico contínuo por atrito de contato e micro-lascamento.
+> [!NOTE]
+> **Por que o Order-CWT salta para quase 70% no CWRU $\leftrightarrow$ Paderborn, mas sofre no Paderborn $\rightarrow$ XJTU-SY?**  
+> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a 2.400 RPM**, enquanto o Paderborn opera a 900 RPM com carga nominal leve. A vibração normal sob 12 kN possui energia superior à falha de pista do Paderborn, gerando um deslocamento de escala de amplitude. Esse fenômeno delimita a fronteira física da técnica e fundamenta a necessidade de calibração por *Few-Shot Learning*.
 
 ---
 
 ## Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)
 
-Para contornar o custo e a inviabilidade prática de rotular milhares de horas de vibração em novos equipamentos industriais, desenvolveu-se uma estratégia de **Few-Shot Domain Adaptation**:
-O modelo pré-treinado na bancada de origem (ex: Paderborn ou CWRU) recebe apenas **$k$ amostras rotuladas por classe** ($k=1$ a $k=5$) da máquina-alvo para ajuste fino leve (2 a 3 épocas) do classificador linear final.
+Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe da máquina-alvo, a ResNet-18 ajusta seus pesos da camada final em apenas 5 épocas:
+
+| Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Recuperação / Ganho |
+|---|:---:|:---:|:---:|:---:|
+| **CWRU $\rightarrow$ Paderborn** | 64.94% | 72.99% | **75.29%** | $+10.35\%$ |
+| **Paderborn $\rightarrow$ CWRU** | 74.51% | 46.49% | **79.73%** | $+5.22\%$ |
+| **CWRU $\rightarrow$ XJTU-SY** | 36.92% | 70.77% | **100.00%** | **Perfeita (100%)** |
+| **XJTU-SY $\rightarrow$ CWRU** | 25.32% | 58.78% | **79.19%** | $+53.87\%$ |
+| **Paderborn $\rightarrow$ XJTU-SY** | 4.62% | 76.92% | **99.08%** | **Salto de $+94.46\%$!** |
+| **XJTU-SY $\rightarrow$ Paderborn** | 32.18% | 32.76% | **72.99%** | $+40.81\%$ |
+| **MÉDIA TRIPARTITE** | **39.75%** | **59.79%** | **84.38%** | **$+44.63\%$ de ganho médio** |
 
 <p align="center">
-  <img src="docs/images/few_shot_tripartite_full_comparison.png" width="850" alt="Few-Shot Domain Adaptation">
+  <img src="docs/images/one_shot_tripartite_full_comparison.png" width="850" alt="Evolução Few-Shot Tripartite">
 </p>
-<p align="center"><sub>Evolução da acurácia cruzada tripartite em função do número de exemplos ($k$-shot). Com apenas $k=5$ amostras calibradoras por classe, a acurácia salta de valores baixos (<35%) para o patamar de 96% a 99.8%.</sub></p>
+<p align="center"><sub>Evolução da acurácia cruzada tripartite em todas as 6 direções sob os regimes Zero-Shot ($K=0$), One-Shot ($K=1$) e Few-Shot ($K=5$). O modelo atinge entre 73% e 100% em todas as transferências com apenas 5 exemplos por classe.</sub></p>
 
 <p align="center">
-  <img src="docs/images/one_shot_k1_time_vs_order_comparison.png" width="750" alt="Comparação 1-Shot">
+  <img src="docs/images/one_shot_k1_time_vs_order_comparison.png" width="750" alt="Comparação 1-Shot Tempo vs Ordens">
 </p>
-<p align="center"><sub>Desempenho no regime extremo de 1-Shot ($k=1$, apenas uma única imagem de calibração por classe): o domínio de Ordens (Order-CWT) acelera e estabiliza a adaptação em comparação ao tempo-frequência clássico.</sub></p>
+<p align="center"><sub>Desempenho no regime extremo de 1-Shot ($K=1$, uma única imagem de calibração por classe): o domínio de Ordens (Order-CWT) acelera e estabiliza a adaptação em comparação ao tempo-frequência clássico.</sub></p>
 
 ---
 
