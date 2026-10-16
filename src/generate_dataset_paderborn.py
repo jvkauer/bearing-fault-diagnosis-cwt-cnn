@@ -17,8 +17,6 @@ import numpy as np
 import pywt
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
-from PIL import Image
-import matplotlib.pyplot as plt
 
 from src.config import (
     PADERBORN_CLASSES,
@@ -146,10 +144,10 @@ def process_and_generate_paderborn_dataset(
                     idx += 1
                     total_images_saved += 1
 
-            print(f"    ✅ {split_name:>5}: {len(file_list)} arquivos -> {idx} imagens geradas")
+            print(f"    [OK] {split_name:>5}: {len(file_list)} arquivos -> {idx} imagens geradas")
 
     print("\n" + "=" * 70)
-    print(f" Processamento Concluído! Total de {total_images_saved} imagens salvas em:")
+    print(f" Concluído: Total de {total_images_saved} imagens salvas em:")
     print(f" {PADERBORN_PROCESSED_DIR}")
     print("=" * 70)
 

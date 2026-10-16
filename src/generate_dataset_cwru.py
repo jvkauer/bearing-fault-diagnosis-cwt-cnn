@@ -11,7 +11,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-import numpy as np
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from src.config import (
@@ -111,10 +110,10 @@ def process_and_generate_dataset(train_ratio=0.7, val_ratio=0.15, test_ratio=0.1
                     idx += 1
                     total_images_saved += 1
 
-            print(f"    ✅ {split_name}: {idx} imagens geradas")
+            print(f"    [OK] {split_name}: {idx} imagens geradas")
 
     print("\n==========================================================")
-    print(f" Processo Concluído! Total de {total_images_saved} imagens salvas em:")
+    print(f" Concluído: Total de {total_images_saved} imagens salvas em:")
     print(f" {PROCESSED_DATA_DIR}")
     print("==========================================================")
 

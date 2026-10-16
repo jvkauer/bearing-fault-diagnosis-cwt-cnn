@@ -9,8 +9,6 @@ import scipy.io
 import numpy as np
 
 from src.config import (
-    PADERBORN_RAW_DIR,
-    PADERBORN_FOLDER_MAP,
     PADERBORN_WINDOW_SIZE,
     PADERBORN_STEP_SIZE
 )

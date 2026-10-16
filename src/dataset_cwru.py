@@ -3,10 +3,12 @@ Módulo de Carregamento e Janelamento do Dataset CWRU.
 Carrega os arquivos .mat do CWRU e realiza o janelamento deslizante dos sinais de vibração.
 """
 
+from typing import List
 from pathlib import Path
 import scipy.io
 import numpy as np
-from src.config import RAW_DATA_DIR, CLASSES, WINDOW_SIZE, STEP_SIZE
+
+from src.config import WINDOW_SIZE, STEP_SIZE
 
 
 def load_cwru_mat_file(file_path: Path) -> np.ndarray:
@@ -35,7 +37,7 @@ def load_cwru_mat_file(file_path: Path) -> np.ndarray:
     return signal
 
 
-def segment_signal(signal: np.ndarray, window_size: int = WINDOW_SIZE, step_size: int = STEP_SIZE) -> list[np.ndarray]:
+def segment_signal(signal: np.ndarray, window_size: int = WINDOW_SIZE, step_size: int = STEP_SIZE) -> List[np.ndarray]:
     """
     Segmenta um sinal 1D em janelas temporais utilizando janelamento deslizante (sliding window).
 

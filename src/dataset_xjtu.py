@@ -11,7 +11,6 @@ import numpy as np
 from src.config import (
     XJTU_RAW_DIR,
     XJTU_CLASSES,
-    XJTU_FS,
     XJTU_WINDOW_SIZE,
     XJTU_STEP_SIZE
 )

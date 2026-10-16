@@ -12,6 +12,7 @@ Nota sobre Orientação Espectral e Coordenadas:
   frequências na base e as altas frequências no topo cartesiano.
 """
 
+from typing import Tuple, Optional
 import numpy as np
 import pywt
 import matplotlib.pyplot as plt
@@ -19,7 +20,7 @@ from PIL import Image
 from src.config import FS, WAVELET, FREQ_MIN, FREQ_MAX, IMG_HEIGHT, IMG_WIDTH
 
 
-def get_scales():
+def get_scales() -> Tuple[np.ndarray, np.ndarray]:
     """
     Gera as escalas da wavelet correspondentes às frequências linearmente espaçadas
     entre FREQ_MIN e FREQ_MAX.
@@ -28,7 +29,7 @@ def get_scales():
     frequência (menor escala).
 
     Returns:
-        tuple: (scales, target_freqs) — Escalas da wavelet e frequências alvo em Hz.
+        Tuple[np.ndarray, np.ndarray]: (scales, target_freqs) — Escalas da wavelet e frequências alvo em Hz.
     """
     target_freqs = np.linspace(FREQ_MIN, FREQ_MAX, IMG_HEIGHT)
     scales = pywt.frequency2scale(WAVELET, target_freqs / FS)
@@ -61,8 +62,8 @@ def compute_cwt(signal_window: np.ndarray) -> np.ndarray:
 def scalogram_to_rgb(
     scalogram_magnitude: np.ndarray,
     cmap_name: str = "jet",
-    vmin: float = None,
-    vmax: float = None
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None
 ) -> Image.Image:
     """
     Converte a matriz numérica do escalograma em uma Imagem PIL RGB (224x224),
@@ -107,8 +108,8 @@ def save_scalogram_png(
     scalogram_magnitude: np.ndarray,
     output_path: str,
     cmap_name: str = "jet",
-    vmin: float = None,
-    vmax: float = None
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None
 ):
     """
     Salva diretamente a matriz do escalograma como arquivo PNG RGB de 224x224 pixels.

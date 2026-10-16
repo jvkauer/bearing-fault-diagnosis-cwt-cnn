@@ -3,18 +3,20 @@ Módulo de Visualização de Sinais, Escalogramas CWT e Curvas de Aprendizado.
 Fornece funções para plotagem de figuras acadêmicas (Padrão Monografia TCC) e curvas de treino/validação.
 """
 
+from typing import Optional, Dict, Any
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from sklearn.metrics import confusion_matrix
 
 from src.config import FS, FREQ_MIN, FREQ_MAX, IMG_HEIGHT
 from src.cwt_processor import compute_cwt
-from sklearn.metrics import confusion_matrix
+
 
 def plot_monograph_figure(
     signal_window: np.ndarray,
     title: str = "Diagnóstico de Falha em Rolamento",
-    save_path: str = None
+    save_path: Optional[str] = None
 ):
     """
     Gera e exibe o gráfico no padrão da Monografia TCC (Figura 5):
@@ -54,7 +56,7 @@ def plot_monograph_figure(
         interpolation="bilinear"  # Suavização apenas para visualização humana
     )
     
-    axs[1].set_title("(b) Scalogram CWT (Morlet Complexa)", fontsize=11, fontweight="bold")
+    axs[1].set_title("(b) Escalograma CWT (Morlet Complexa)", fontsize=11, fontweight="bold")
     axs[1].set_xlabel("Tempo (s)", fontsize=10)
     axs[1].set_ylabel("Frequência (Hz)", fontsize=10)
     
@@ -74,20 +76,20 @@ def plot_monograph_figure(
 
 
 def plot_training_curves(
-    history: dict,
+    history: Dict[str, Any],
     model_name: str,
-    save_path: str = None
+    save_path: Optional[str] = None
 ):
     """
     Plota as curvas de aprendizado (Perda e Acurácia) de treino/validação,
     destacando a época do checkpoint (menor val_loss) salvo durante o treino.
 
     Args:
-        history (dict): Dicionário com listas 'train_loss', 'val_loss',
-                        'train_acc', 'val_acc' (retornado pelas funções
-                        de treino em cnn_processor.py / transfer_learning.py).
+        history (Dict[str, Any]): Dicionário com listas 'train_loss', 'val_loss',
+                                  'train_acc', 'val_acc' (retornado pelas funções
+                                  de treino em cnn_processor.py / transfer_learning.py).
         model_name (str): Nome do modelo, usado nos títulos (ex: "ResNet18").
-        save_path (str, optional): Caminho para salvar a figura em PNG.
+        save_path (Optional[str]): Caminho para salvar a figura em PNG.
     """
     epochs_axis = range(1, len(history["train_loss"]) + 1)
 
@@ -147,9 +149,9 @@ def plot_training_curves(
 
     
 def plot_confusion_matrix(
-    res: dict,
+    res: Dict[str, Any],
     model_name: str,
-    save_path: str = None
+    save_path: Optional[str] = None
 ):
     """
     Plota e exibe a Matriz de Confusão para as predições no conjunto de teste.

@@ -17,7 +17,6 @@ if str(BASE_DIR) not in sys.path:
 import numpy as np
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
-from PIL import Image
 
 from src.config import (
     CWRU_DIR,
@@ -367,7 +366,7 @@ def generate_cwru_order_dataset(
                     idx += 1
                     total_images += 1
 
-            print(f"    ✅ CWRU {cls_name:>10} ({split_name:>5}): {len(files)} arquivos -> {idx} imagens geradas")
+            print(f"    [OK] CWRU {cls_name:>10} ({split_name:>5}): {len(files)} arquivos -> {idx} imagens geradas")
 
     print(f"\n[+] Total de imagens CWRU geradas em: {ORDER_CWRU_DIR} ({total_images} imagens)")
 
@@ -443,7 +442,7 @@ def generate_paderborn_order_dataset(
                     idx += 1
                     total_images += 1
 
-            print(f"    ✅ Paderborn {cls_name:>10} ({split_name:>5}): {len(files)} arquivos -> {idx} imagens geradas")
+            print(f"    [OK] Paderborn {cls_name:>10} ({split_name:>5}): {len(files)} arquivos -> {idx} imagens geradas")
 
     print(f"\n[+] Total de imagens Paderborn geradas em: {ORDER_PADERBORN_DIR} ({total_images} imagens)")
 
@@ -517,7 +516,7 @@ def generate_xjtu_order_dataset(
                     idx += 1
                     total_images += 1
 
-            print(f"    ✅ XJTU-SY {cls_name:>10} ({split_name:>5}): {len(s_files)} arquivos -> {idx} imagens geradas")
+            print(f"    [OK] XJTU-SY {cls_name:>10} ({split_name:>5}): {len(s_files)} arquivos -> {idx} imagens geradas")
 
     print(f"\n[+] Total de imagens XJTU-SY geradas em: {ORDER_XJTU_DIR} ({total_images} imagens)")
 

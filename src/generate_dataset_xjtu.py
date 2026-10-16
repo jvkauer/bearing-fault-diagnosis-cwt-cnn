@@ -16,7 +16,6 @@ import numpy as np
 import pywt
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
-from PIL import Image
 
 from src.config import (
     XJTU_CLASSES,
@@ -25,7 +24,6 @@ from src.config import (
     XJTU_FREQ_MIN,
     XJTU_FREQ_MAX,
     IMG_HEIGHT,
-    IMG_WIDTH,
     WAVELET,
     RANDOM_SEED
 )
@@ -119,11 +117,11 @@ def process_and_generate_xjtu_dataset(
                     img_idx += 1
                     total_images_saved += 1
 
-            print(f"    ✅ {split_name:>5} ({cls_name}): {len(split_files)} arquivos -> {img_idx} imagens geradas")
+            print(f"    [OK] {split_name:>5} ({cls_name}): {len(split_files)} arquivos -> {img_idx} imagens geradas")
 
     print("\n" + "=" * 70)
-    print(f"[SUCESSO] Total de {total_images_saved} escalogramas gerados e salvos em:")
-    print(f"          {XJTU_PROCESSED_DIR}")
+    print(f"[INFO] Total de {total_images_saved} escalogramas gerados e salvos em:")
+    print(f"       {XJTU_PROCESSED_DIR}")
     print("=" * 70)
 
 

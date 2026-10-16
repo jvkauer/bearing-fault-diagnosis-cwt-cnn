@@ -38,7 +38,7 @@ Este projeto desenvolve e valida experimentalmente uma metodologia robusta de di
 
 1. **Transformada Wavelet Contínua (CWT):** Mapeia os sinais temporais unidimensionais de vibração em escalogramas bidimensionais tempo-frequência (wavelet Morlet complexa), capturando com alta resolução eventos transitórios não estacionários provocados pelo choque dos elementos rolantes sobre descontinuidades mecânicas.
 2. **Computed Order Tracking (COT):** Reamostra o sinal temporal para o domínio angular (amostras uniformes por revolução do eixo), gerando escalogramas no domínio de **Ângulo-Ordem (Order-CWT)**, eliminando a dependência do sinal em relação à velocidade de rotação (RPM).
-3. **Deep Learning e Transfer Learning:** Classificação automática dos escalogramas via CNN customizada (*BearingCNN*, ~1.2M parâmetros) e modelos convolucionais pré-treinados no ImageNet (*ResNet-18*, *EfficientNet-B0*, *Inception-v3*).
+3. **Deep Learning e Transfer Learning:** Classificação automática dos escalogramas via CNN customizada (*BearingCNN*, 0,52 M parâmetros) e modelos convolucionais pré-treinados no ImageNet (*ResNet-18*, *EfficientNet-B0*, *Inception-v3*).
 4. **Estudo de Generalização Cruzada (*Domain Shift*):** Avaliação tripartite entre falhas artificiais usinadas em laboratório (**CWRU**) e falhas autênticas por fadiga mecânica acelerada (**Paderborn University** e **XJTU-SY**), comprovando a eficácia de *Few-Shot Domain Adaptation* para calibração industrial instantânea.
 
 ---
@@ -129,7 +129,7 @@ flowchart TD
     end
 
     subgraph Modelos["3. Aprendizado Profundo"]
-        E1["BearingCNN Customizada<br/>(~1.2M parâmetros, treino do zero)"]
+        E1["BearingCNN Customizada<br/>(0,52 M parâmetros, treino do zero)"]
         E2["Transfer Learning (Fine-Tuning)<br/>(ResNet18, EfficientNet-B0, Inception-v3)"]
     end
 
@@ -158,10 +158,10 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 
 | Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
 |---|---|:---:|:---:|:---:|
-| **ResNet18** | Fine-Tuning (`Freeze=False`) | **99.87%** | **100.00%** | ~11.1M |
-| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **98.86%** | **100.00%** | ~5.3M |
-| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **96.92%** | **100.00%** | ~23.8M |
-| **BearingCNN (Própria)** | Treino do Zero | **95.69%** | **100.00%** | ~1.2M |
+| **ResNet-18** | Fine-Tuning (`Freeze=False`) | **99.87%** | **100.00%** | 11,18 M |
+| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **98.86%** | **100.00%** | 4,01 M |
+| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **96.92%** | **100.00%** | 21,79 M |
+| **BearingCNN (Própria)** | Treino do Zero | **95.69%** | **100.00%** | 0,52 M |
 
 <p align="center">
   <b>Curvas de Aprendizado (Perda e Acurácia — ResNet-18)</b><br>
@@ -414,10 +414,10 @@ Para reproduzir visualmente cada etapa (curvas de convergência, matrizes de con
 
 | Arquitetura | Profundidade | Parâmetros | Mecanismo Central e Justificativa |
 |---|:---:|:---:|---|
-| **BearingCNN** | 4 blocos conv | ~1.2M | Rede customizada projetada especificamente para o problema, leve e adequada para *Edge AI*. |
-| **ResNet-18** | 18 camadas | ~11.1M | **Melhor Desempenho Global:** Conexões residuais (*skip connections*) que preservam linhas finas de ordem e harmônicos transitórios. |
-| **EfficientNet-B0** | Composta | ~5.3M | Escalonamento composto balanceado entre profundidade, largura e resolução com baixa demanda de memória. |
-| **Inception-v3** | 42 camadas | ~23.8M | Convoluções paralelas multiescala que capturam assinaturas de impacto em janelas de tempo de diferentes tamanhos. |
+| **BearingCNN** | 4 blocos conv | 0,52 M | Rede customizada projetada especificamente para o problema, leve e adequada para *Edge AI*. |
+| **ResNet-18** | 18 camadas | 11,18 M | **Melhor Desempenho Global:** Conexões residuais (*skip connections*) que preservam linhas finas de ordem e harmônicos transitórios. |
+| **EfficientNet-B0** | Composta | 4,01 M | Escalonamento composto balanceado entre profundidade, largura e resolução com baixa demanda de memória. |
+| **Inception-v3** | 42 camadas | 21,79 M | Convoluções paralelas multiescala que capturam assinaturas de impacto em janelas de tempo de diferentes tamanhos. |
 
 ---
 

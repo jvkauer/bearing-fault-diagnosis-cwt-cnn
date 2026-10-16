@@ -151,7 +151,7 @@ def plot_time_vs_order_comparison(
     axes[0, 1].set_xlabel("Tempo (ms)")
     axes[0, 1].set_ylabel("Frequência (Hz)")
     
-    # Linha 2: Domínio Ângulo-Ordem (Alinhado Perfeitamente pelo Order Tracking!)
+    # Linha 2: Domínio Ângulo-Ordem (Alinhamento espectral via Order Tracking)
     revs = np.linspace(0, 4, len(ang_cwru))
     axes[1, 0].imshow(cwt_order_cwru, extent=[revs[0], revs[-1], 0.5, 15.0], cmap="jet", aspect="auto", origin="lower")
     axes[1, 0].set_title(f"CWRU: Ângulo-Ordem ({rpm_cwru:.0f} RPM)\n[Ordem de Falha BPFI ~ 5.4 Ordens]", fontsize=11, fontweight="bold", color="darkgreen")
