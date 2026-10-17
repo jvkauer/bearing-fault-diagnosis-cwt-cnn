@@ -54,7 +54,7 @@ O projeto contempla três dos maiores e mais respeitados bancos de dados públic
 | **Ordem Pista Interna (BPFI)** | **5.41 ordens** | **4.95 ordens** | **4.92 ordens** ($\Delta = 0{,}03$) |
 | **Ordem Pista Externa (BPFO)** | **3.58 ordens** | **3.05 ordens** | **3.08 ordens** ($\Delta = 0{,}03$) |
 | **Taxa de Amostragem ($f_s$)** | 12.000 Hz | 64.000 Hz | 25.600 Hz |
-| **Velocidade de Rotação** | ~1.797 RPM (variável) | 900 e 1.500 RPM | 2.100 e 2.250 RPM |
+| **Velocidade de Rotação** | 1.730 a 1.797 RPM | 900 RPM (`N09_M07_F10`) | 2.100 a 2.250 RPM |
 | **Natureza da Falha** | Artificial (eletroerosão EDM) | **Fadiga mecânica real acelerada** | **Fadiga real (*run-to-failure*)** |
 | **Condições Avaliadas** | Normal, Pista Interna, Pista Externa, Esfera | Normal, Pista Interna, Pista Externa | Normal, Pista Interna, Pista Externa |
 
@@ -229,23 +229,23 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 > [!NOTE]
 > **Comportamento Físico e Disparidade Operacional:**  
-> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a 2.400 RPM**, enquanto o Paderborn opera a 900 RPM com carga nominal leve. A vibração normal sob 12 kN possui energia superior à falha de pista do Paderborn, gerando um deslocamento de escala de amplitude. Esse fenômeno delimita a fronteira física da técnica e fundamenta a necessidade de calibração por *Few-Shot Learning*.
+> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a mais de 2.100 RPM**, enquanto o Paderborn opera a 900 RPM com carga nominal leve. A vibração normal sob 12 kN possui energia superior à falha de pista do Paderborn, gerando um deslocamento de escala de amplitude. Esse fenômeno delimita a fronteira física da técnica e fundamenta a necessidade de calibração por *Few-Shot Learning*.
 
 ---
 
 ## Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)
 
-Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe da máquina-alvo, a ResNet-18 ajusta seus pesos da camada final em apenas 5 épocas:
+Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe da máquina-alvo, a ResNet-18 ajusta seus pesos rapidamente em 15 épocas de calibração:
 
 | Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Variação ($K=0 \rightarrow K=5$) |
 |---|:---:|:---:|:---:|:---:|
-| **CWRU $\rightarrow$ Paderborn** | 64.94% | 72.99% | **75.29%** | $+10.35\text{ p.p.}$ |
-| **Paderborn $\rightarrow$ CWRU** | 74.51% | 46.49% | **79.73%** | $+5.22\text{ p.p.}$ |
-| **CWRU $\rightarrow$ XJTU-SY** | 36.92% | 70.77% | **100.00%** | $+63.08\text{ p.p.}$ |
+| **CWRU $\rightarrow$ Paderborn** | 66.67% | 72.99% | **75.29%** | $+8.62\text{ p.p.}$ |
+| **Paderborn $\rightarrow$ CWRU** | 69.35% | 46.49% | **79.73%** | $+10.38\text{ p.p.}$ |
+| **CWRU $\rightarrow$ XJTU-SY** | 37.23% | 70.77% | **100.00%** | $+62.77\text{ p.p.}$ |
 | **XJTU-SY $\rightarrow$ CWRU** | 25.32% | 58.78% | **79.19%** | $+53.87\text{ p.p.}$ |
-| **Paderborn $\rightarrow$ XJTU-SY** | 4.62% | 76.92% | **99.08%** | $+94.46\text{ p.p.}$ |
-| **XJTU-SY $\rightarrow$ Paderborn** | 32.18% | 32.76% | **72.99%** | $+40.81\text{ p.p.}$ |
-| **MÉDIA TRIPARTITE** | **39.75%** | **59.79%** | **84.38%** | **$+44.63\text{ p.p.}$** |
+| **Paderborn $\rightarrow$ XJTU-SY** | 0.31% | 76.92% | **99.08%** | $+98.77\text{ p.p.}$ |
+| **XJTU-SY $\rightarrow$ Paderborn** | 29.89% | 32.76% | **72.99%** | $+43.10\text{ p.p.}$ |
+| **MÉDIA TRIPARTITE** | **38.13%** | **59.79%** | **84.38%** | **$+46.25\text{ p.p.}$** |
 
 <p align="center">
   <img src="docs/images/one_shot_tripartite_full_comparison.png" width="850" alt="Evolução Few-Shot Tripartite">
@@ -421,7 +421,7 @@ Para reproduzir visualmente cada etapa (curvas de convergência, matrizes de con
 | **BearingCNN** | 4 blocos conv | 0,52 M | Rede customizada projetada especificamente para o problema, leve e adequada para *Edge AI*. |
 | **ResNet-18** | 18 camadas | 11,18 M | **Melhor Desempenho Global:** Conexões residuais (*skip connections*) que preservam linhas finas de ordem e harmônicos transitórios. |
 | **EfficientNet-B0** | Composta | 4,01 M | Escalonamento composto balanceado entre profundidade, largura e resolução com baixa demanda de memória. |
-| **Inception-v3** | 42 camadas | 21,79 M | Convoluções paralelas multiescala que capturam assinaturas de impacto em janelas de tempo de diferentes tamanhos. |
+| **Inception-v3** | 48 camadas | 21,79 M | Convoluções paralelas multiescala que capturam assinaturas de impacto em janelas de tempo de diferentes tamanhos. |
 
 ---
 
