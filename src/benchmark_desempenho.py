@@ -48,8 +48,8 @@ NUM_CLASSES = 4
 MODELS = {
     "BearingCNN": ("bearing_cnn", CKPT_DIR / "checkpoint_bearing_cnn_best.pth", 95.69),
     "ResNet-18": ("resnet18", CKPT_DIR / "checkpoint_resnet18_best.pth", 99.87),
-    "EfficientNet-B0": ("efficientnet_b0", CKPT_DIR / "checkpoint_efficientnet_b0_best.pth", 99.79),
-    "Inception-v3": ("inception_v3", CKPT_DIR / "checkpoint_inception_v3_best.pth", 99.75),
+    "EfficientNet-B0": ("efficientnet_b0", CKPT_DIR / "checkpoint_efficientnet_b0_best.pth", 98.86),
+    "Inception-v3": ("inception_v3", CKPT_DIR / "checkpoint_inception_v3_best.pth", 96.92),
 }
 
 WARMUP = 20

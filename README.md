@@ -266,13 +266,14 @@ bearing-fault-diagnosis-cwt-cnn/
 ├── data/
 │   ├── cwru/                       # Dataset CWRU bruto (.mat) e processado
 │   ├── paderborn/                  # Dataset Paderborn University bruto (.mat) e processado
-│   ├── xjtu_sy/                    # Dataset XJTU-SY bruto (.csv) e processado
+│   ├── xjtu/                       # Dataset XJTU-SY bruto (.csv) e processado
 │   └── order_tracking/             # Escalogramas reamostrados em Ângulo-Ordem (Order-CWT)
 ├── notebooks/
-│   ├── 1_cwru/                     # Módulo 1: Pipeline CWRU
+│   ├── 1_cwru/                     # Módulo 1: Pipeline CWRU e Análise de Desempenho
 │   │   ├── 01_cwru_exploracao_cwt.ipynb
 │   │   ├── 02_cwru_treinamento_cnn.ipynb
-│   │   └── 03_cwru_transfer_learning.ipynb
+│   │   ├── 03_cwru_transfer_learning.ipynb
+│   │   └── 04_cwru_analise_desempenho.ipynb
 │   ├── 2_paderborn/                # Módulo 2: Pipeline Paderborn (64 kHz)
 │   │   ├── 01_paderborn_exploracao_cwt.ipynb
 │   │   ├── 02_paderborn_treinamento_cnn.ipynb
@@ -302,10 +303,13 @@ bearing-fault-diagnosis-cwt-cnn/
 │   ├── generate_order_dataset.py   # Gerador de escalogramas em Ângulo-Ordem (COT)
 │   ├── cnn_processor.py            # Arquitetura BearingCNN e motor de treino/avaliação
 │   ├── transfer_learning.py        # Construtores e rotinas de treino para ResNet/Inception/EfficientNet
+│   ├── benchmark_desempenho.py     # Medição de GFLOPs, parâmetros e latência CPU/GPU
 │   └── visualization.py            # Plotagem de matrizes de confusão, curvas de treino e escalogramas
+├── results/
+│   └── benchmark_desempenho.csv    # Métricas consolidadas de complexidade e latência
 ├── docs/
-│   ├── TCC.pdf                     # Monografia completa do trabalho
 │   └── images/                     # Figuras de alta resolução utilizadas na documentação
+├── benchmark_hiperparametros.py    # Experimento fatorial de hiperparâmetros e funções de ativação
 ├── requirements.txt
 ├── LICENSE
 └── README.md
@@ -396,10 +400,10 @@ from src.transfer_learning import train_and_evaluate_transfer_model
 resultado = train_and_evaluate_transfer_model(
     model_name="resnet18",   # Opções: 'resnet18' | 'inception_v3' | 'efficientnet_b0'
     num_epochs=10,
-    lr=1e-4,
-    freeze_backbone=False,
+    lr=5e-5,
+    freeze=False,
     data_dir="data/cwru/processed",
-    checkpoint_prefix="checkpoint_cwru"
+    checkpoint_prefix="notebooks/1_cwru/checkpoint"
 )
 
 print(f"Acurácia no conjunto de teste: {resultado['test_acc']:.2f}%")
