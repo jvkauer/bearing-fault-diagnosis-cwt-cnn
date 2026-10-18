@@ -102,7 +102,7 @@ def _compute_cwru_global_signal_stats(train_files_by_class: dict = None):
             mat_files = train_files_by_class[cls_name]
         else:
             class_dir = CWRU_DIR / cls_name
-            mat_files = _split_files(sorted(class_dir.glob("*.mat")))["train"]
+            mat_files = _split_files_list(sorted(class_dir.glob("*.mat")))["train"]
         for mat_file in mat_files:
             sig = load_cwru_mat_file(mat_file)
             all_vals.append(sig)
@@ -124,7 +124,7 @@ def _compute_paderborn_global_signal_stats(train_files_by_folder: dict = None, m
             mat_files = sorted(class_dir.glob("*.mat"))
             if max_files_per_class:
                 mat_files = mat_files[:max_files_per_class]
-            mat_files = _split_files(mat_files)["train"]
+            mat_files = _split_files_list(mat_files)["train"]
         for mat_file in mat_files:
             sig = load_paderborn_mat_file(mat_file)
             all_vals.append(sig)
@@ -146,7 +146,7 @@ def _compute_xjtu_global_signal_stats(train_files_by_class: dict = None, max_fil
     else:
         manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
         for cls_name, files in manifest.items():
-            for csv_file in _split_files(files)["train"]:
+            for csv_file in _split_files_list(files)["train"]:
                 sig = load_xjtu_csv_file(csv_file, channel=0)
                 all_vals.append(sig)
     all_vals = np.concatenate(all_vals)
@@ -165,7 +165,7 @@ def _cwru_order_cwt_pass1(global_mean, global_std, train_files_by_class: dict = 
             mat_files = train_files_by_class[cls_name]
         else:
             class_dir = CWRU_DIR / cls_name
-            mat_files = _split_files(sorted(class_dir.glob("*.mat")))["train"]
+            mat_files = _split_files_list(sorted(class_dir.glob("*.mat")))["train"]
 
         for mat_file in mat_files:
             rpm = extract_cwru_rpm(mat_file.name)
@@ -214,7 +214,7 @@ def _paderborn_order_cwt_pass1(global_mean, global_std, train_files_by_folder: d
             mat_files = sorted(class_dir.glob("*.mat"))
             if max_files_per_class:
                 mat_files = mat_files[:max_files_per_class]
-            mat_files = _split_files(mat_files)["train"]
+            mat_files = _split_files_list(mat_files)["train"]
 
         for mat_file in mat_files:
             rpm = extract_paderborn_rpm(mat_file.name)
@@ -259,7 +259,7 @@ def _xjtu_order_cwt_pass1(global_mean, global_std, train_files_by_class: dict = 
         file_items = train_files_by_class.items()
     else:
         manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
-        file_items = [(cls_name, _split_files(files)["train"]) for cls_name, files in manifest.items()]
+        file_items = [(cls_name, _split_files_list(files)["train"]) for cls_name, files in manifest.items()]
 
     for cls_name, files in file_items:
         for csv_file in files:
