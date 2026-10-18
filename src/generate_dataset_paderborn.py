@@ -17,22 +17,21 @@ from functools import lru_cache
 import numpy as np
 import pywt
 from tqdm import tqdm
-from sklearn.model_selection import train_test_split
 
 from src.config import (
     PADERBORN_CLASSES,
-    PADERBORN_FOLDER_MAP,
-    PADERBORN_RAW_DIR,
     PADERBORN_PROCESSED_DIR,
     PADERBORN_FS,
     PADERBORN_FREQ_MIN,
     PADERBORN_FREQ_MAX,
     IMG_HEIGHT,
-    IMG_WIDTH,
-    WAVELET,
-    RANDOM_SEED
+    WAVELET
 )
-from src.dataset_paderborn import load_paderborn_mat_file, segment_paderborn_signal
+from src.dataset_paderborn import (
+    load_paderborn_mat_file,
+    segment_paderborn_signal,
+    get_paderborn_strict_splits
+)
 from src.cwt_processor import scalogram_to_rgb
 
 
@@ -67,75 +66,57 @@ def create_directory_structure():
 
 
 def process_and_generate_paderborn_dataset(
-    train_ratio: float = 0.7,
-    val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
-    max_files_per_class: int = None
+    num_train_files: int = 8,
+    num_val_files: int = 4,
+    num_test_files: int = 5,
+    max_windows_per_file: int = 25
 ):
     """
-    Gera o dataset de escalogramas CWT para o Paderborn sem Data Leakage.
+    Gera o dataset de escalogramas CWT para o Paderborn com Divisão Estrita Inter-Condições Operacionais:
+      - Treino: Condição Nominal N15_M07_F10 (1500 RPM, 0.7 Nm, 1000 N).
+      - Validação: Condição N15_M07_F04 (1500 RPM, 0.7 Nm, Força Radial Reduzida 400 N).
+      - Teste: Condição Inédita N15_M01_F10 (1500 RPM, Torque Reduzido 0.1 Nm, 1000 N).
+
+    Avalia com rigor a generalização do diagnóstico sob variação de torque de carga e força radial.
 
     Args:
-        train_ratio (float): Proporção de treino (padrão 0.70).
-        val_ratio (float): Proporção de validação (padrão 0.15).
-        test_ratio (float): Proporção de teste (padrão 0.15).
-        max_files_per_class (int, optional): Limite de arquivos por classe para testes rápidos.
+        num_train_files (int): Quantidade de arquivos de treino por classe (padrão: 8).
+        num_val_files (int): Quantidade de arquivos de validação por classe (padrão: 4).
+        num_test_files (int): Quantidade de arquivos de teste por classe (padrão: 5).
+        max_windows_per_file (int, optional): Limite de janelas por arquivo para balanceamento (padrão: 25).
     """
-    assert abs((train_ratio + val_ratio + test_ratio) - 1.0) < 1e-5, "As proporções devem somar 1.0"
-
     print("=" * 70)
     print(" GERAÇÃO DO DATASET DE ESCALOGRAMAS CWT — PADERBORN (PU DATASET)")
-    print("    Divisão por ARQUIVOS .mat (Prevenção de Data Leakage)")
+    print("    Divisão Estrita: Leave-Operating-Condition-Out (1500 RPM)")
+    print("    Treino: N15_M07_F10 | Validação: N15_M07_F04 | Teste: N15_M01_F10")
     print(f"    Taxa de amostragem: {PADERBORN_FS} Hz | Freqs: {PADERBORN_FREQ_MIN}-{PADERBORN_FREQ_MAX} Hz")
     print("=" * 70)
 
     create_directory_structure()
+    splits = get_paderborn_strict_splits(
+        num_train_files=num_train_files,
+        num_val_files=num_val_files,
+        num_test_files=num_test_files
+    )
+
     total_images_saved = 0
 
-    for folder_name, cls_name in PADERBORN_FOLDER_MAP.items():
-        print(f"\n[+] Processando pasta '{folder_name}' -> Classe: '{cls_name}'...")
-        class_raw_dir = PADERBORN_RAW_DIR / folder_name
-        
-        if not class_raw_dir.exists():
-            print(f"    [AVISO] Pasta {class_raw_dir} não encontrada! Pulando.")
-            continue
+    for cls_name in PADERBORN_CLASSES:
+        print(f"\n[+] Processando classe: '{cls_name}'...")
 
-        mat_files = sorted(class_raw_dir.glob("*.mat"))
-        if max_files_per_class:
-            mat_files = mat_files[:max_files_per_class]
+        for split_name in ["train", "val", "test"]:
+            file_list = splits[split_name][cls_name]
+            file_names = [f.stem[:18] for f in file_list]
+            print(f"    {split_name:>5}: {len(file_list)} arquivos -> {file_names}")
 
-        print(f"    Total de arquivos .mat selecionados: {len(mat_files)}")
-
-        # 1. Divisão por arquivos (SEM Data Leakage)
-        temp_ratio = val_ratio + test_ratio
-        train_files, temp_files = train_test_split(
-            mat_files,
-            test_size=temp_ratio,
-            random_state=RANDOM_SEED,
-            shuffle=True
-        )
-
-        relative_val_ratio = val_ratio / temp_ratio
-        val_files, test_files = train_test_split(
-            temp_files,
-            test_size=(1.0 - relative_val_ratio),
-            random_state=RANDOM_SEED,
-            shuffle=True
-        )
-
-        file_splits = {
-            "train": train_files,
-            "val": val_files,
-            "test": test_files
-        }
-
-        for split_name, file_list in file_splits.items():
             dest_dir = PADERBORN_PROCESSED_DIR / split_name / cls_name
             idx = 0
 
             for mat_file in file_list:
                 signal = load_paderborn_mat_file(mat_file)
                 windows = segment_paderborn_signal(signal)
+                if max_windows_per_file is not None:
+                    windows = windows[:max_windows_per_file]
 
                 for window in tqdm(windows, desc=f"      {cls_name}/{split_name}/{mat_file.stem[:18]}", leave=False):
                     scalogram_mat = compute_paderborn_cwt(window)
@@ -156,3 +137,4 @@ def process_and_generate_paderborn_dataset(
 
 if __name__ == "__main__":
     process_and_generate_paderborn_dataset()
+

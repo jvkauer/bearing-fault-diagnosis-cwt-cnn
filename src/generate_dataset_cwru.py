@@ -12,14 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 from tqdm import tqdm
-from sklearn.model_selection import train_test_split
 from src.config import (
     CLASSES,
-    RAW_DATA_DIR,
-    PROCESSED_DATA_DIR,
-    RANDOM_SEED
+    PROCESSED_DATA_DIR
 )
-from src.dataset_cwru import load_cwru_mat_file, segment_signal
+from src.dataset_cwru import load_cwru_mat_file, segment_signal, get_cwru_strict_splits
 from src.cwt_processor import compute_cwt, save_scalogram_png
 
 
@@ -32,79 +29,45 @@ def create_directory_structure():
             path.mkdir(parents=True, exist_ok=True)
 
 
-def process_and_generate_dataset(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15):
+def process_and_generate_dataset(max_windows_per_file: int = None):
     """
-    Pipeline de geração do dataset SEM Data Leakage:
-    1. Para cada classe, lista os arquivos .mat disponíveis.
-    2. Divide os ARQUIVOS .mat entre train/val/test (não as janelas!).
-    3. Somente depois aplica o janelamento deslizante em cada split.
-    4. Calcula a CWT e salva os escalogramas PNG 224x224.
+    Pipeline de geração do dataset CWRU com Divisão Estrita por Condição de Carga (Leave-One-Load-Out):
+      - Treino (20 arquivos): Cargas 0 HP (1797 RPM) e 1 HP (1772 RPM).
+      - Validação (10 arquivos): Carga 2 HP (1750 RPM).
+      - Teste (10 arquivos): Carga 3 HP (1730 RPM) — condição inédita para o modelo!
 
-    Isso garante que nenhuma amostra do sinal de treino apareça no teste,
-    mesmo com 50% de sobreposição (overlap) no janelamento.
+    Garante prevenção total de Data Leakage temporal e avalia a capacidade de generalização
+    entre regimes operacionais de torque e velocidade distintos.
     """
-    assert abs((train_ratio + val_ratio + test_ratio) - 1.0) < 1e-5, "As proporções devem somar 1.0"
-
     print("==========================================================")
-    print(" GERAÇÃO DO DATASET DE ESCALOGRAMAS (CWT -> CNN) ")
-    print("    Divisão por ARQUIVOS (sem Data Leakage) ")
+    print(" GERAÇÃO DO DATASET DE ESCALOGRAMAS (CWT -> CNN) — CWRU ")
+    print("    Divisão Estrita: Leave-One-Load-Out (0HP+1HP -> 2HP -> 3HP) ")
     print("==========================================================")
 
     create_directory_structure()
+    splits = get_cwru_strict_splits()
 
     total_images_saved = 0
 
     for cls_name in CLASSES:
         print(f"\n[+] Processando classe: '{cls_name}'...")
 
-        # 1. Listar todos os arquivos .mat da classe
-        class_dir = RAW_DATA_DIR / cls_name
-        mat_files = sorted(class_dir.glob("*.mat"))
-        print(f"    Arquivos .mat encontrados: {len(mat_files)}")
-
-        # 2. Dividir ARQUIVOS (não janelas!) entre train / val / test
-        temp_ratio = val_ratio + test_ratio
-        train_files, temp_files = train_test_split(
-            mat_files,
-            test_size=temp_ratio,
-            random_state=RANDOM_SEED,
-            shuffle=True
-        )
-
-        relative_val_ratio = val_ratio / temp_ratio
-        val_files, test_files = train_test_split(
-            temp_files,
-            test_size=(1.0 - relative_val_ratio),
-            random_state=RANDOM_SEED,
-            shuffle=True
-        )
-
-        file_splits = {
-            "train": train_files,
-            "val": val_files,
-            "test": test_files
-        }
-
-        # Log dos arquivos por split
-        for split_name, file_list in file_splits.items():
+        for split_name in ["train", "val", "test"]:
+            file_list = splits[split_name][cls_name]
             file_names = [f.stem for f in file_list]
             print(f"    {split_name:>5}: {len(file_list)} arquivos → {file_names}")
 
-        # 3. Para cada split: carregar arquivos → janelamento → CWT → salvar PNG
-        for split_name, file_list in file_splits.items():
             dest_dir = PROCESSED_DATA_DIR / split_name / cls_name
             idx = 0
 
             for mat_file in file_list:
-                # Carregar sinal bruto e aplicar janelamento
                 signal = load_cwru_mat_file(mat_file)
                 windows = segment_signal(signal)
+                if max_windows_per_file is not None:
+                    windows = windows[:max_windows_per_file]
 
-                for window in tqdm(windows, desc=f"      {cls_name}/{split_name}/{mat_file.stem}"):
-                    # Calcular CWT
+                for window in tqdm(windows, desc=f"      {cls_name}/{split_name}/{mat_file.stem}", leave=False):
                     scalogram_mat = compute_cwt(window)
-
-                    # Salvar PNG RGB 224x224 sem bordas
                     img_path = dest_dir / f"{cls_name}_{split_name}_{idx:04d}.png"
                     save_scalogram_png(scalogram_mat, str(img_path))
                     idx += 1
@@ -120,4 +83,5 @@ def process_and_generate_dataset(train_ratio=0.7, val_ratio=0.15, test_ratio=0.1
 
 if __name__ == "__main__":
     process_and_generate_dataset()
+
 

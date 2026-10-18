@@ -83,72 +83,104 @@ def _sort_csvs_numerically(folder: Path) -> List[Path]:
     return sorted(files, key=lambda p: int(p.stem) if p.stem.isdigit() else p.stem)
 
 
+def get_xjtu_strict_splits(
+    raw_dir: Path = None,
+    num_train_files: int = 16,
+    num_val_files: int = 12,
+    num_test_files: int = 10
+) -> Dict[str, Dict[str, List[Path]]]:
+    """
+    Retorna a partição estrita de arquivos .csv do XJTU-SY com separação rigorosa de rolamentos
+    físicos (Leave-Bearing-Out) e garantia física de falhas puras (Wang et al., 2020 Tabela II).
+
+    Regras Metodológicas:
+      1. Zero Rolamentos Compartilhados: Nenhuma identidade física de rolamento aparece em mais
+         de uma partição (Treino ∩ Validação = ∅, Treino ∩ Teste = ∅, Validação ∩ Teste = ∅).
+      2. Zero Rolamentos Compartilhados entre Classes: Cada classe dentro de cada partição utiliza
+         um rolamento físico exclusivo (9 rolamentos físicos distintos no total).
+      3. Falhas Puras Comprovadas: Exclusão rigorosa de falhas combinadas (Bearing1_5 e Bearing3_2) e
+         de gaiola (Bearing1_4 e Bearing2_3). Todas as amostras de falha interna e externa
+         possuem tipo de avaria pura catalogado na literatura oficial.
+      4. Linha de Base Normal Reprodutível: Amostras saudáveis extraídas estritamente dos
+         primeiros arquivos (fase estacionária nominal pré-degradação).
+      5. Condição Inédita no Teste: O conjunto de teste é composto exclusivamente por
+         rolamentos da condição 40 Hz / 10 kN (2400 RPM).
+
+    Alocação dos 9 Rolamentos Físicos Exclusivos:
+      - Treino:
+          * normal:     Bearing1_1 (início saudável - 35 Hz) [16 arquivos]
+          * outer_race: Bearing1_2 (falha severa pista externa - 35 Hz) [16 arquivos]
+          * inner_race: Bearing2_1 (falha severa pista interna pura - 37.5 Hz) [16 arquivos]
+      - Validação:
+          * normal:     Bearing2_2 (início saudável - 37.5 Hz) [12 arquivos]
+          * outer_race: Bearing2_4 (falha severa pista externa - 37.5 Hz) [12 arquivos]
+          * inner_race: Bearing3_3 (falha severa pista interna pura - 40 Hz) [12 arquivos]
+      - Teste (Rolamentos e Condição 40 Hz 100% Inéditos no Treino):
+          * normal:     Bearing3_1 (início saudável - 40 Hz) [10 arquivos]
+          * outer_race: Bearing3_5 (falha severa pista externa pura - 40 Hz) [10 arquivos]
+          * inner_race: Bearing3_4 (falha severa pista interna pura - 40 Hz) [10 arquivos]
+
+    Returns:
+        Dict[str, Dict[str, List[Path]]]: {"train": {...}, "val": {...}, "test": {...}}
+    """
+    target_dir = raw_dir if raw_dir is not None else XJTU_RAW_DIR
+
+    def _get_files(cond: str, b_name: str) -> List[Path]:
+        return _sort_csvs_numerically(target_dir / cond / b_name)
+
+    # Coletar arquivos por rolamento
+    b1_1 = _get_files("35Hz12kN", "Bearing1_1")
+    b1_2 = _get_files("35Hz12kN", "Bearing1_2")
+    b2_1 = _get_files("37.5Hz11kN", "Bearing2_1")
+
+    b2_2 = _get_files("37.5Hz11kN", "Bearing2_2")
+    b2_4 = _get_files("37.5Hz11kN", "Bearing2_4")
+    b3_3 = _get_files("40Hz10kN", "Bearing3_3")
+
+    b3_1 = _get_files("40Hz10kN", "Bearing3_1")
+    b3_5 = _get_files("40Hz10kN", "Bearing3_5")
+    b3_4 = _get_files("40Hz10kN", "Bearing3_4")
+
+    splits = {
+        "train": {
+            "normal": b1_1[:num_train_files],
+            "outer_race": b1_2[-num_train_files:] if b1_2 else [],
+            "inner_race": b2_1[-num_train_files:] if b2_1 else [],
+        },
+        "val": {
+            "normal": b2_2[:num_val_files],
+            "outer_race": b2_4[-num_val_files:] if b2_4 else [],
+            "inner_race": b3_3[-num_val_files:] if b3_3 else [],
+        },
+        "test": {
+            "normal": b3_1[:num_test_files],
+            "outer_race": b3_5[-num_test_files:] if b3_5 else [],
+            "inner_race": b3_4[-num_test_files:] if b3_4 else [],
+        }
+    }
+
+    return splits
+
+
 def get_xjtu_manifest(max_files_per_class: int = 30) -> Dict[str, List[Path]]:
     """
-    Monta o manifesto balanceado de arquivos por classe para o dataset XJTU-SY.
-
-    Regras de seleção baseadas nos ensaios acelerados de vida útil (Run-to-Failure):
-      - 'normal': Primeiros 15 arquivos (1.csv a 15.csv) dos rolamentos Bearing1_1
-        e Bearing1_2 na condição 35Hz12kN (início saudável do ensaio, 30 arquivos).
-      - 'outer_race': Últimos 15 arquivos dos rolamentos Bearing1_1 e Bearing1_2 na
-        condição 35Hz12kN (estágio final com falha severa na pista externa, 30 arquivos).
-      - 'inner_race': Últimos 30 arquivos do rolamento Bearing2_1 na condição
-        37.5Hz11kN (estágio final com falha severa na pista interna; selecionado na
-        segunda condição operacional pois a condição 35Hz12kN não possui nenhum
-        ensaio com falha isolada na pista interna).
+    Retorna o manifesto de arquivos XJTU-SY agregando as partições estritas de
+    treino, validação e teste com falhas puras e rolamentos disjuntos.
 
     Args:
-        max_files_per_class (int): Quantidade balanceada de arquivos por classe (padrão: 30).
+        max_files_per_class (int): Quantidade total de arquivos por classe a retornar (padrão: 30).
 
     Returns:
         Dict[str, List[Path]]: Dicionário mapeando cada classe à sua lista de arquivos CSV.
     """
+    splits = get_xjtu_strict_splits()
     manifest = {cls: [] for cls in XJTU_CLASSES}
-    n_total = max_files_per_class if max_files_per_class else 30
-    n_half = n_total // 2
 
-    # -------------------------------------------------------------------------
-    # 1. CLASSE NORMAL (Arquivos iniciais de rolamentos saudáveis - 35Hz12kN)
-    # -------------------------------------------------------------------------
-    normal_candidates = []
-    for cond, b_name in [
-        ("35Hz12kN", "Bearing1_1"),
-        ("35Hz12kN", "Bearing1_2"),
-    ]:
-        folder = XJTU_RAW_DIR / cond / b_name
-        files = _sort_csvs_numerically(folder)
-        normal_candidates.extend(files[:n_half])
-
-    manifest["normal"] = normal_candidates[:n_total]
-
-    # -------------------------------------------------------------------------
-    # 2. CLASSE PISTA EXTERNA (Outer Race - Estágio final com dano severo - 35Hz12kN)
-    # -------------------------------------------------------------------------
-    outer_candidates = []
-    for cond, b_name in [
-        ("35Hz12kN", "Bearing1_1"),
-        ("35Hz12kN", "Bearing1_2"),
-    ]:
-        folder = XJTU_RAW_DIR / cond / b_name
-        files = _sort_csvs_numerically(folder)
-        if files:
-            outer_candidates.extend(files[-n_half:])
-
-    manifest["outer_race"] = outer_candidates[:n_total]
-
-    # -------------------------------------------------------------------------
-    # 3. CLASSE PISTA INTERNA (Inner Race - Estágio final com dano severo - 37.5Hz11kN)
-    # -------------------------------------------------------------------------
-    inner_candidates = []
-    for cond, b_name in [
-        ("37.5Hz11kN", "Bearing2_1"),
-    ]:
-        folder = XJTU_RAW_DIR / cond / b_name
-        files = _sort_csvs_numerically(folder)
-        if files:
-            inner_candidates.extend(files[-n_total:])
-
-    manifest["inner_race"] = inner_candidates[:n_total]
+    for cls_name in XJTU_CLASSES:
+        for split_name in ["train", "val", "test"]:
+            manifest[cls_name].extend(splits[split_name][cls_name])
+        manifest[cls_name] = manifest[cls_name][:max_files_per_class]
 
     return manifest
+
 

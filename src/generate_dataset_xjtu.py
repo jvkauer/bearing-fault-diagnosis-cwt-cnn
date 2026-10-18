@@ -16,7 +16,6 @@ from functools import lru_cache
 import numpy as np
 import pywt
 from tqdm import tqdm
-from sklearn.model_selection import train_test_split
 
 from src.config import (
     XJTU_CLASSES,
@@ -25,10 +24,13 @@ from src.config import (
     XJTU_FREQ_MIN,
     XJTU_FREQ_MAX,
     IMG_HEIGHT,
-    WAVELET,
-    RANDOM_SEED
+    WAVELET
 )
-from src.dataset_xjtu import load_xjtu_csv_file, segment_xjtu_signal, get_xjtu_manifest
+from src.dataset_xjtu import (
+    load_xjtu_csv_file,
+    segment_xjtu_signal,
+    get_xjtu_strict_splits
+)
 from src.cwt_processor import scalogram_to_rgb
 
 
@@ -63,53 +65,51 @@ def create_directory_structure():
 
 
 def process_and_generate_xjtu_dataset(
-    train_ratio: float = 0.7,
-    val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
-    max_files_per_class: int = 30
+    num_train_files: int = 16,
+    num_val_files: int = 12,
+    num_test_files: int = 10,
+    max_windows_per_file: int = 15
 ):
     """
-    Gera o dataset de escalogramas CWT no domínio do tempo para o XJTU-SY sem Data Leakage.
+    Gera o dataset de escalogramas CWT para o XJTU-SY com Divisão Estrita Leave-Bearing-Out:
+      - 9 Rolamentos Físicos Mutuamente Exclusivos (Zero vazamento de identidade).
+      - Falhas Puras Comprovadas na Literatura Oficial (Wang et al., 2020 Tabela II).
+      - Linha de Base Saudável Nominal Estritamente nos Arquivos Iniciais.
+      - Conjunto de Teste Inédito na Condição de 40 Hz / 10 kN (2400 RPM).
 
-    Args:
-        train_ratio (float): Proporção de treino (padrão 0.70).
-        val_ratio (float): Proporção de validação (padrão 0.15).
-        test_ratio (float): Proporção de teste (padrão 0.15).
-        max_files_per_class (int): Quantidade de arquivos por classe para manter balanceamento.
+    Alocação dos Rolamentos:
+      - Treino: Bearing1_1 (normal), Bearing1_2 (outer_race), Bearing2_1 (inner_race)
+      - Validação: Bearing2_2 (normal), Bearing2_4 (outer_race), Bearing3_3 (inner_race)
+      - Teste: Bearing3_1 (normal), Bearing3_5 (outer_race), Bearing3_4 (inner_race)
     """
-    assert abs((train_ratio + val_ratio + test_ratio) - 1.0) < 1e-5, "As proporções devem somar 1.0"
-
     print("=" * 70)
     print(" GERAÇÃO DO DATASET DE ESCALOGRAMAS CWT — XJTU-SY")
-    print("    Divisão estrita por ARQUIVOS .csv (Prevenção de Data Leakage)")
+    print("    Divisão Estrita: Leave-Bearing-Out com 9 Rolamentos Disjuntos")
+    print("    Falhas Puras Comprovadas (Wang et al., 2020) — Sem Falhas Combinadas")
     print(f"    Taxa de amostragem: {XJTU_FS} Hz | Freqs: {XJTU_FREQ_MIN}-{XJTU_FREQ_MAX} Hz")
     print("=" * 70)
 
     create_directory_structure()
-    manifest = get_xjtu_manifest(max_files_per_class=max_files_per_class)
+    splits = get_xjtu_strict_splits(
+        num_train_files=num_train_files,
+        num_val_files=num_val_files,
+        num_test_files=num_test_files
+    )
     total_images_saved = 0
 
     for cls_name in XJTU_CLASSES:
-        files = manifest[cls_name]
-        print(f"\n[+] Processando classe '{cls_name}' ({len(files)} arquivos .csv)...")
+        print(f"\n[+] Processando classe '{cls_name}'...")
 
-        temp_ratio = val_ratio + test_ratio
-        train_files, temp_files = train_test_split(
-            files, test_size=temp_ratio, random_state=RANDOM_SEED, shuffle=True
-        )
-        val_files, test_files = train_test_split(
-            temp_files, test_size=(test_ratio / temp_ratio), random_state=RANDOM_SEED, shuffle=True
-        )
-
-        splits = {"train": train_files, "val": val_files, "test": test_files}
-
-        for split_name, split_files in splits.items():
+        for split_name in ["train", "val", "test"]:
+            split_files = splits[split_name][cls_name]
             dest_dir = XJTU_PROCESSED_DIR / split_name / cls_name
             img_idx = 0
 
             for csv_file in tqdm(split_files, desc=f"  {split_name:>5} ({cls_name})", leave=False):
                 sig = load_xjtu_csv_file(csv_file, channel=0)
                 windows = segment_xjtu_signal(sig)
+                if max_windows_per_file is not None:
+                    windows = windows[:max_windows_per_file]
 
                 for w in windows:
                     cwt_mat = compute_xjtu_cwt(w)
@@ -128,4 +128,5 @@ def process_and_generate_xjtu_dataset(
 
 
 if __name__ == "__main__":
-    process_and_generate_xjtu_dataset(max_files_per_class=30)
+    process_and_generate_xjtu_dataset()
+

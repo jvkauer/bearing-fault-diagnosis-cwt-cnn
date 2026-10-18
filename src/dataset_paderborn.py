@@ -79,3 +79,47 @@ def segment_paderborn_signal(
         windows.append(signal[start:end])
         
     return windows
+
+
+def get_paderborn_strict_splits(
+    raw_dir: Path = None,
+    num_train_files: int = 8,
+    num_val_files: int = 4,
+    num_test_files: int = 5
+) -> dict:
+    """
+    Retorna a divisão estrita de arquivos .mat do Paderborn (PU Dataset) por condição operacional:
+      - Treino: Condição Nominal N15_M07_F10 (1500 RPM, Torque 0.7 Nm, Força Radial 1000 N).
+      - Validação: Condição N15_M07_F04 (1500 RPM, Torque 0.7 Nm, Força Radial Reduzida 400 N).
+      - Teste: Condição Inédita N15_M01_F10 (1500 RPM, Torque Reduzido 0.1 Nm, Força Radial 1000 N).
+
+    Classes mapeadas pelos códigos de rolamento:
+      - K001 -> normal
+      - KI14 -> inner_race
+      - KA15 -> outer_race
+
+    Garante isolamento absoluto entre regimes de torque e esforço radial,
+    avaliando rigorosamente a generalização inter-condições operacionais.
+
+    Returns:
+        dict: Estrutura {"train": {classe: [Paths]}, "val": {classe: [Paths]}, "test": {classe: [Paths]}}
+    """
+    from src.config import PADERBORN_FOLDER_MAP, PADERBORN_RAW_DIR
+    target_dir = raw_dir if raw_dir is not None else PADERBORN_RAW_DIR
+
+    splits = {"train": {}, "val": {}, "test": {}}
+
+    for folder_name, cls_name in PADERBORN_FOLDER_MAP.items():
+        class_dir = target_dir / folder_name
+        all_mats = sorted(class_dir.glob("*.mat"))
+
+        train_files = [f for f in all_mats if f.name.startswith("N15_M07_F10")][:num_train_files]
+        val_files = [f for f in all_mats if f.name.startswith("N15_M07_F04")][:num_val_files]
+        test_files = [f for f in all_mats if f.name.startswith("N15_M01_F10")][:num_test_files]
+
+        splits["train"][cls_name] = train_files
+        splits["val"][cls_name] = val_files
+        splits["test"][cls_name] = test_files
+
+    return splits
+

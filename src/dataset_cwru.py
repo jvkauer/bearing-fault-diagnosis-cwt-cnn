@@ -59,3 +59,36 @@ def segment_signal(signal: np.ndarray, window_size: int = WINDOW_SIZE, step_size
     return windows
 
 
+def get_cwru_strict_splits(raw_dir: Path = None) -> dict:
+    """
+    Retorna a divisão estrita de arquivos .mat do CWRU por condição de carga (Leave-One-Load-Out):
+      - Treino (20 arquivos): Cargas de 0 HP (1797 RPM) e 1 HP (1772 RPM) em todas as classes e severidades.
+      - Validação (10 arquivos): Carga de 2 HP (1750 RPM) em todas as classes e severidades.
+      - Teste (10 arquivos): Carga de 3 HP (1730 RPM) em todas as classes e severidades (carga inédita no treino!).
+
+    Garante separação estrita por arquivos brutos com isolamento total da velocidade e carga operacional.
+
+    Returns:
+        dict: Estrutura {"train": {classe: [Paths]}, "val": {classe: [Paths]}, "test": {classe: [Paths]}}
+    """
+    from src.config import CLASSES, RAW_DATA_DIR
+    target_dir = raw_dir if raw_dir is not None else RAW_DATA_DIR
+
+    splits = {"train": {}, "val": {}, "test": {}}
+
+    for cls_name in CLASSES:
+        cls_folder = target_dir / cls_name
+        all_mats = sorted(cls_folder.glob("*.mat"))
+        
+        train_files = [f for f in all_mats if "_0HP_" in f.name or "_1HP_" in f.name]
+        val_files = [f for f in all_mats if "_2HP_" in f.name]
+        test_files = [f for f in all_mats if "_3HP_" in f.name]
+
+        splits["train"][cls_name] = train_files
+        splits["val"][cls_name] = val_files
+        splits["test"][cls_name] = test_files
+
+    return splits
+
+
+

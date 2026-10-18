@@ -64,7 +64,53 @@ O projeto contempla três bancos de dados públicos amplamente utilizados na lit
 > **Compatibilidade Cinemática Paderborn $\leftrightarrow$ XJTU-SY:**  
 > Ambos os rolamentos possuem exatamente 8 esferas e relações dimensionais que resultam em ordens de falha virtualmente idênticas ($\text{BPFI} \approx 4{,}9$ e $\text{BPFO} \approx 3{,}0$). Essa simetria geométrica permite isolar o efeito das diferenças de severidade, carga radial e ressonância de bancada nos testes de transferência de domínio.
 
+### Protocolo de Particionamento Estrito e Prevenção de Data Leakage
+
+Para superar as limitações de divisões aleatórias ingênuas (que causam vazamento de dados temporal por autocorrelação e sobreposição de janelas), o projeto adota um **Protocolo de Particionamento Estrito Baseado em Arquivos Brutos e Condições Operacionais**:
+
+```
+                                      PROTOCOLOS DE PARTIÇÃO ESTRITA
+┌─────────────────────────────────┬─────────────────────────────────┬─────────────────────────────────┐
+│              CWRU               │            PADERBORN            │             XJTU-SY             │
+│      (Leave-One-Load-Out)       │ (Leave-Operating-Condition-Out) │       (Leave-Bearing-Out)       │
+├─────────────────────────────────┼─────────────────────────────────┼─────────────────────────────────┤
+│ Treino: 0 HP & 1 HP             │ Treino: N15_M07_F10             │ Treino (35 & 37.5 Hz):          │
+│ (1797 & 1772 RPM | 20 arquivos) │ (1500 RPM, 0.7 Nm, 1000 N)      │ • Normal: Bearing1_1 (início)   │
+│                                 │ (8 arquivos / classe)           │ • Outer:  Bearing1_2 (fim)      │
+│                                 │                                 │ • Inner:  Bearing2_1 (fim pura) │
+├─────────────────────────────────┼─────────────────────────────────┼─────────────────────────────────┤
+│ Validação: 2 HP                 │ Validação: N15_M07_F04          │ Validação (37.5 & 40 Hz):       │
+│ (1750 RPM | 10 arquivos)        │ (1500 RPM, 0.7 Nm, 400 N)       │ • Normal: Bearing2_2 (início)   │
+│                                 │ (4 arquivos / classe)           │ • Outer:  Bearing2_4 (fim)      │
+│                                 │                                 │ • Inner:  Bearing3_3 (fim pura) │
+├─────────────────────────────────┼─────────────────────────────────┼─────────────────────────────────┤
+│ Teste: 3 HP                     │ Teste: N15_M01_F10              │ Teste Inédito (40 Hz / 10 kN):  │
+│ (1730 RPM | 10 arquivos)        │ (1500 RPM, 0.1 Nm, 1000 N)      │ • Normal: Bearing3_1 (início)   │
+│ [Carga e RPM Inéditos no Treino]│ (5 arquivos / classe)           │ • Outer:  Bearing3_5 (fim pura) │
+│                                 │ [Torque Inédito no Treino]      │ • Inner:  Bearing3_4 (fim pura) │
+│                                 │                                 │ [Rolamentos e RPM Inéditos!]    │
+└─────────────────────────────────┴─────────────────────────────────┴─────────────────────────────────┘
+```
+
+#### Detalhamento das Garantias Metodológicas:
+
+1. **CWRU (Isolamento de Carga Mecânica e Velocidade):**
+   - O conjunto de teste opera sob carga plena de **3 HP ($1.730\text{ RPM}$)**, condição que nunca aparece no treinamento ($0\text{ HP}$ e $1\text{ HP}$).
+   - Avalia se o modelo aprendeu características fundamentais da falha ou se memorizou a rotação operacional do motor.
+
+2. **Paderborn University (Isolamento de Regime de Torque e Carga Radial a 1500 RPM):**
+   - Mantém a rotação nominal constante ($1.500\text{ RPM}$) e isola as forças eletromecânicas: validação em força radial reduzida ($400\text{ N}$) e teste em torque de carga reduzido ($0{,}1\text{ Nm}$).
+   - Avalia a capacidade de generalização inter-condições operacionais com rolamentos industriais reais sujeitos a danos de fadiga (*pitting* em KI14) e indentação plástica (KA15).
+
+3. **XJTU-SY (Isolamento Total de Rolamentos Físicos e Falhas Puras):**
+   - **9 Rolamentos Físicos Mutuamente Exclusivos:** Nenhuma identidade física de rolamento é compartilhada entre Treino, Validação e Teste ($\text{Treino} \cap \text{Validação} = \emptyset$, $\text{Treino} \cap \text{Teste} = \emptyset$, $\text{Validação} \cap \text{Teste} = \emptyset$).
+   - **Nenhum Compartilhamento entre Classes:** Cada classe dentro de cada partição utiliza um rolamento físico dedicado.
+   - **Garantia Física de Falhas Puras (Wang et al., 2020 Tabela II):** Exclusão de falhas combinadas (`Bearing1_5` e `Bearing3_2`) e fraturas de gaiola (`Bearing1_4` e `Bearing2_3`). Todas as amostras de falha interna e externa pertencem comprovadamente a modos de falha isolados.
+   - **Linha de Base Normal Reprodutível:** Amostras da classe normal são extraídas estritamente dos primeiros arquivos da vida útil (fase estacionária pré-degradação).
+   - **Condição Operacional de Teste Inédita:** O conjunto de teste opera a $40\text{ Hz} / 10\text{ kN}$ ($2.400\text{ RPM}$), que não compõe o treinamento ($35\text{ Hz}$ e $37{,}5\text{ Hz}$).
+
 ---
+
 
 ## Justificativa Técnica: CWT vs. STFT vs. FFT
 
@@ -283,9 +329,12 @@ Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrut
 
 Em conformidade com as boas práticas de reprodutibilidade e transparência científica em *Condition Monitoring*, destacam-se as seguintes delimitações do protocolo experimental atual e oportunidades para trabalhos futuros:
 
-1. **Escopo do Particionamento por Arquivo (*In-Domain* vs. *Cross-Domain*):**
-   - No **CWRU**, a divisão ao nível de arquivo (`train_test_split` com `RANDOM_SEED=42` sobre os 40 arquivos `.mat`) garante ausência total de janelas temporais sobrepostas entre treino e teste e avalia a generalização entre diferentes regimes de carga (0 a 3 HP) de uma mesma bancada.
-   - Nos benchmarks **Paderborn** (`K001`, `KI14`, `KA15` sob condição `N09_M07_F10`) e **XJTU-SY** (`Bearing1_1` início, `Bearing1_2` fim e `Bearing2_1` fim), cada classe na avaliação *in-domain* é representada por um rolamento específico ensaiado até a falha. Portanto, a acurácia *in-domain* (~100%) reflete a separabilidade de janelas em arquivos distintos daquele ensaio, enquanto a capacidade real de generalização para **novos rolamentos e novas bancadas** é avaliada nas seções **Cross-Domain** e **Few-Shot**. Trabalhos futuros podem expandir o particionamento intra-dataset do Paderborn e XJTU-SY para validação cruzada entre diferentes códigos de rolamento da mesma classe (*leave-one-bearing-out*).
+1. **Particionamento Estrito e Generalização Operacional:**
+   - O projeto adota oficialmente o particionamento estrito sem vazamento de dados (*data leakage*):
+     - **CWRU**: Esquema *Leave-One-Load-Out* (treino em 0 HP e 1 HP, validação em 2 HP e teste em 3 HP), isolando a condição de carga e velocidade ($1.730\text{ RPM}$ no teste).
+     - **Paderborn**: Esquema *Leave-Operating-Condition-Out* (treino na condição nominal `N15_M07_F10`, validação em força radial reduzida `N15_M07_F04` e teste sob torque de carga reduzido `N15_M01_F10`), isolando as variáveis de regime mecânico a $1.500\text{ RPM}$.
+     - **XJTU-SY**: Esquema *Leave-Bearing-Out* com 9 rolamentos físicos exclusivos e falhas puras comprovadas por Wang et al. (2020), avaliando rolamentos e condição operacional ($40\text{ Hz} / 10\text{ kN} = 2.400\text{ RPM}$) totalmente inéditos no teste.
+   - Esse protocolo assegura que as métricas reflitam a capacidade real de reconhecimento de anomalias sob variações de regime e em rolamentos inéditos.
 2. **Reamostragem Angular em Regime Estacionário vs. Tacômetro Dinâmico:**
    - Como os ensaios públicos operam sob rotação nominal constante por arquivo e não disponibilizam pulsos ópticos de *keyphasor* uniformizados nas três bancadas, o módulo `src/order_tracking.py` realiza a reamostragem angular assumindo velocidade instantânea constante igual à nominal do arquivo ($f_r = \text{RPM}/60$). Em máquinas sujeitas a rampas severas de partida/parada (*run-up/coast-down*), recomenda-se acoplar a integração da fase instantânea via tacômetro físico ou estimação *tacho-less* de fase.
 3. **Filtragem Anti-Aliasing e Demodulação de Envelope antes da Order-CWT:**
