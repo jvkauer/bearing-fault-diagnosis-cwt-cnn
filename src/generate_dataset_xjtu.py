@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+from functools import lru_cache
 import numpy as np
 import pywt
 from tqdm import tqdm
@@ -31,6 +32,7 @@ from src.dataset_xjtu import load_xjtu_csv_file, segment_xjtu_signal, get_xjtu_m
 from src.cwt_processor import scalogram_to_rgb
 
 
+@lru_cache(maxsize=None)
 def get_xjtu_scales():
     """Calcula as escalas CWT para a taxa de amostragem de 25.6 kHz do XJTU-SY."""
     target_freqs = np.linspace(XJTU_FREQ_MIN, XJTU_FREQ_MAX, IMG_HEIGHT)

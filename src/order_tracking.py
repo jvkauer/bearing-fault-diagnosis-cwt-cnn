@@ -5,6 +5,7 @@ Realiza a reamostragem angular a partir da velocidade nominal estacionária de c
 no domínio angular (voltas do eixo) para garantir invariância à rotação (RPM).
 """
 
+from functools import lru_cache
 from typing import Tuple, Optional
 from pathlib import Path
 import numpy as np
@@ -13,6 +14,19 @@ import pywt
 import matplotlib.pyplot as plt
 
 from src.config import WAVELET, IMG_HEIGHT
+
+
+@lru_cache(maxsize=None)
+def get_order_scales(
+    samples_per_rev: int = 1024,
+    order_min: float = 0.5,
+    order_max: float = 15.0,
+    num_scales: int = IMG_HEIGHT
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Calcula e armazena em cache as escalas da wavelet para o domínio de ordens."""
+    target_orders = np.linspace(order_min, order_max, num_scales)
+    scales = pywt.frequency2scale(WAVELET, target_orders / samples_per_rev)
+    return scales, target_orders
 
 
 def resample_to_angle_domain(
@@ -92,8 +106,7 @@ def compute_order_cwt(
     Returns:
         Tuple[np.ndarray, np.ndarray]: (Matriz de magnitude do escalograma de ordens, vetor de ordens).
     """
-    target_orders = np.linspace(order_min, order_max, num_scales)
-    scales = pywt.frequency2scale(WAVELET, target_orders / samples_per_rev)
+    scales, target_orders = get_order_scales(samples_per_rev, order_min, order_max, num_scales)
     
     coefs_cwt, _ = pywt.cwt(
         angle_signal,

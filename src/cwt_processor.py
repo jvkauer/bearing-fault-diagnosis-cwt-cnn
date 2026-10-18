@@ -12,6 +12,7 @@ Nota sobre Orientação Espectral e Coordenadas:
   frequências na base e as altas frequências no topo cartesiano.
 """
 
+from functools import lru_cache
 from typing import Tuple, Optional
 import numpy as np
 import pywt
@@ -20,6 +21,7 @@ from PIL import Image
 from src.config import FS, WAVELET, FREQ_MIN, FREQ_MAX, IMG_HEIGHT, IMG_WIDTH
 
 
+@lru_cache(maxsize=None)
 def get_scales() -> Tuple[np.ndarray, np.ndarray]:
     """
     Gera as escalas da wavelet correspondentes às frequências linearmente espaçadas

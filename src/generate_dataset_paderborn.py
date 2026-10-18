@@ -13,6 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+from functools import lru_cache
 import numpy as np
 import pywt
 from tqdm import tqdm
@@ -35,6 +36,7 @@ from src.dataset_paderborn import load_paderborn_mat_file, segment_paderborn_sig
 from src.cwt_processor import scalogram_to_rgb
 
 
+@lru_cache(maxsize=None)
 def get_paderborn_scales():
     """Calcula as escalas CWT para a taxa de amostragem de 64 kHz do Paderborn."""
     target_freqs = np.linspace(PADERBORN_FREQ_MIN, PADERBORN_FREQ_MAX, IMG_HEIGHT)

@@ -18,8 +18,10 @@ Transformada Wavelet Contínua (CWT), *Computed Order Tracking* (COT) e Redes Ne
 - [Escalogramas por Classe](#escalogramas-por-classe)
 - [Pipeline do Sistema](#pipeline-do-sistema)
 - [Resultados Intra-Domínio (In-Domain)](#resultados-intra-domínio-in-domain)
+- [Desempenho Computacional e Viabilidade em Tempo Real](#desempenho-computacional-e-viabilidade-em-tempo-real)
 - [Avaliação Cruzada e Análise de Domain Shift (Cross-Domain)](#avaliação-cruzada-e-análise-de-domain-shift-cross-domain)
 - [Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)](#adaptação-de-domínio-com-poucas-amostras-few-shot-domain-adaptation)
+- [Limitações Metodológicas e Direções Futuras](#limitações-metodológicas-e-direções-futuras)
 - [Estrutura do Repositório](#estrutura-do-repositório)
 - [Instalação](#instalação)
 - [Guia de Uso](#guia-de-uso)
@@ -32,20 +34,20 @@ Transformada Wavelet Contínua (CWT), *Computed Order Tracking* (COT) e Redes Ne
 
 ## Visão Geral
 
-Mancais de rolamento respondem por mais de 40% das falhas catastróficas em máquinas elétricas rotativas industriais (motores de indução, geradores, bombas e compressores). O diagnóstico precoce dessas anomalias é um pilar indispensável para a manutenção preditiva da Indústria 4.0.
+Mancais de rolamento respondem por mais de 40% das falhas em máquinas elétricas rotativas industriais (motores de indução, geradores, bombas e compressores). O diagnóstico automatizado dessas anomalias é um pilar relevante para sistemas de manutenção preditiva.
 
-Este projeto desenvolve e valida experimentalmente uma metodologia robusta de diagnóstico que combina:
+Este projeto desenvolve e avalia experimentalmente uma metodologia de diagnóstico que investiga:
 
-1. **Transformada Wavelet Contínua (CWT):** Mapeia os sinais temporais unidimensionais de vibração em escalogramas bidimensionais tempo-frequência (wavelet Morlet complexa), capturando com alta resolução eventos transitórios não estacionários provocados pelo choque dos elementos rolantes sobre descontinuidades mecânicas.
-2. **Computed Order Tracking (COT):** Reamostra o sinal temporal para o domínio angular (amostras uniformes por revolução do eixo), gerando escalogramas no domínio de **Ângulo-Ordem (Order-CWT)**, eliminando a dependência do sinal em relação à velocidade de rotação (RPM).
+1. **Transformada Wavelet Contínua (CWT):** Mapeia os sinais temporais unidimensionais de vibração em escalogramas bidimensionais tempo-frequência (wavelet Morlet complexa), capturando eventos transitórios não estacionários provocados pelo choque dos elementos rolantes sobre descontinuidades mecânicas.
+2. **Computed Order Tracking (COT) em Regime Estacionário:** Reamostra o sinal temporal para o domínio angular ($1.024\text{ amostras/volta}$ com base na frequência nominal estacionária de rotação do eixo $f_r = \text{RPM}/60$), gerando escalogramas no domínio de **Ângulo-Ordem (Order-CWT)** e alinhando as ordens geométricas de falha frente a diferentes velocidades de rotação.
 3. **Deep Learning e Transfer Learning:** Classificação automática dos escalogramas via CNN customizada (*BearingCNN*, 0,52 M parâmetros) e modelos convolucionais pré-treinados no ImageNet (*ResNet-18*, *EfficientNet-B0*, *Inception-v3*).
-4. **Estudo de Generalização Cruzada (*Domain Shift*):** Avaliação tripartite entre falhas artificiais usinadas em laboratório (**CWRU**) e falhas autênticas por fadiga mecânica acelerada (**Paderborn University** e **XJTU-SY**), comprovando a eficácia de *Few-Shot Domain Adaptation* para calibração industrial instantânea.
+4. **Estudo de Generalização Cruzada (*Domain Shift*):** Avaliação tripartite entre falhas artificiais usinadas em laboratório (**CWRU**) e danos reais originados em ensaios de vida acelerada (**Paderborn University** e **XJTU-SY**), analisando o colapso de generalização em transferência direta (*Zero-Shot*) e o ajuste com poucas amostras (*Few-Shot Domain Adaptation*).
 
 ---
 
 ## Bancos de Dados Analisados (Benchmark Tripartite)
 
-O projeto contempla três dos maiores e mais respeitados bancos de dados públicos da literatura internacional de prognóstico e saúde de máquinas (PHM):
+O projeto contempla três bancos de dados públicos amplamente utilizados na literatura internacional de prognóstico e saúde de máquinas (PHM):
 
 | Característica | CWRU (EUA) | Paderborn University (Alemanha) | XJTU-SY (China) |
 |---|:---:|:---:|:---:|
@@ -55,12 +57,12 @@ O projeto contempla três dos maiores e mais respeitados bancos de dados públic
 | **Ordem Pista Externa (BPFO)** | **3.58 ordens** | **3.05 ordens** | **3.08 ordens** ($\Delta = 0{,}03$) |
 | **Taxa de Amostragem ($f_s$)** | 12.000 Hz | 64.000 Hz | 25.600 Hz |
 | **Velocidade de Rotação** | 1.730 a 1.797 RPM | 900 RPM (`N09_M07_F10`) | 2.100 a 2.250 RPM |
-| **Natureza da Falha** | Artificial (eletroerosão EDM) | **Fadiga mecânica real acelerada** | **Fadiga real (*run-to-failure*)** |
-| **Condições Avaliadas** | Normal, Pista Interna, Pista Externa, Esfera | Normal, Pista Interna, Pista Externa | Normal, Pista Interna, Pista Externa |
+| **Natureza da Falha** | Artificial (eletroerosão EDM) | **Dano real acelerado (*pitting* em KI14 / indentação plástica em KA15)** | **Degradação real (*run-to-failure*)** |
+| **Condições Avaliadas** | Normal, Pista Interna, Pista Externa, Esfera | Normal (`K001`), Pista Interna (`KI14`), Pista Externa (`KA15`) | Normal, Pista Interna, Pista Externa |
 
 > [!TIP]
 > **Compatibilidade Cinemática Paderborn $\leftrightarrow$ XJTU-SY:**  
-> Ambos os rolamentos possuem exatamente 8 esferas e relações dimensionais que resultam em ordens de falha virtualmente idênticas ($\text{BPFI} \approx 4{,}9$ e $\text{BPFO} \approx 3{,}0$). Essa simetria geométrica é o alicerce ideal para validação de algoritmos de transferência de domínio entre máquinas reais.
+> Ambos os rolamentos possuem exatamente 8 esferas e relações dimensionais que resultam em ordens de falha virtualmente idênticas ($\text{BPFI} \approx 4{,}9$ e $\text{BPFO} \approx 3{,}0$). Essa simetria geométrica permite isolar o efeito das diferenças de severidade, carga radial e ressonância de bancada nos testes de transferência de domínio.
 
 ---
 
@@ -72,7 +74,7 @@ O projeto contempla três dos maiores e mais respeitados bancos de dados públic
 | **Janela de Ponderação** | Sinal inteiro (infinita) | Fixa no tempo e frequência | **Adaptativa multi-resolução** |
 | **Resolução Temporal** | Nula | Constante | **Alta para frequências elevadas** |
 | **Resolução Espectral** | Constante | Constante | **Alta para baixas frequências** |
-| **Sinais Não Estacionários** | Inadequada | Parcialmente adequada | **Excelente (padrão-ouro)** |
+| **Sinais Não Estacionários** | Inadequada | Parcialmente adequada | **Elevada adequação** |
 
 Sinais de vibração decorrentes de falhas em rolamentos são inerentemente **não estacionários e impulsivos**. A CWT contorna o Princípio da Incerteza de Heisenberg-Gabor adaptando sua janela de análise através de operações de dilatação (*escala*) e translação (*tempo*), permitindo localizar no tempo pulsos transitórios de alta frequência e capturar harmônicos contínuos em baixa frequência.
 
@@ -85,12 +87,12 @@ Sinais de vibração decorrentes de falhas em rolamentos são inerentemente **n�
 
 ## Computed Order Tracking (COT) e Invariância à Rotação
 
-Em aplicações industriais reais, a rotação do motor flutua devido a oscilações de carga e rede. No domínio do tempo, uma mudança de rotação comprime ou expande os pulsos, provocando dispersão espectral e falha catastrófica de modelos treinados em rotação fixa (*Domain Shift*).
+Em aplicações industriais, diferentes máquinas operam em rotações distintas. No domínio do tempo, uma mudança de rotação comprime ou expande o espaçamento entre os pulsos de impacto, deslocando as frequências características (BPFI, BPFO, BSF) e degradando o desempenho de modelos treinados em rotação fixa (*Domain Shift*).
 
-O **Computed Order Tracking (COT)** reamostra o sinal temporal $x(t)$ para o domínio angular $x(\theta)$ através de interpolação cúbica baseada no vetor de rotação instantânea do eixo:
+Como os bancos públicos analisados operam em regime estacionário (velocidade constante por ensaio) e não disponibilizam canal de tacômetro óptico em todas as bancadas, o módulo de **Computed Order Tracking (COT)** implementa um tacômetro virtual estacionário, reamostrando o sinal temporal $x(t)$ de duração $T = N_{\text{voltas}} / f_r$ para o domínio angular $x(\theta)$ via interpolação *spline* cúbica com passo angular constante:
 $$\Delta \theta = \frac{2\pi}{N_{\text{amostras/volta}}}$$
 
-Ao aplicar a CWT no domínio angular, o eixo vertical passa de frequências em Hertz ($f$) para **Ordens de Rotação** ($O = f / f_r$). As frequências de defeito mecânico (BPFI, BPFO, BSF) tornam-se constantes puramente geométricas:
+Ao aplicar a CWT sobre o sinal reamostrado no domínio angular, o eixo vertical é normalizado pela frequência de rotação do eixo ($f_r$), convertendo Hertz ($f$) em **Ordens de Rotação** ($O = f / f_r$). Dessa forma, as frequências fundamentais de defeito tornam-se constantes geométricas independentes do RPM nominal:
 
 <p align="center">
   <img src="docs/images/order_tracking_comparison_time_vs_order.png" width="850" alt="Comparação Tempo-Frequência vs Ângulo-Ordem">
@@ -174,8 +176,8 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 </p>
 <p align="center"><sub>Curvas de convergência de treino/validação com checkpointing automático e respectiva Matriz de Confusão da ResNet-18 no conjunto de teste do CWRU (apenas 3 erros em 2.368 predições).</sub></p>
 
-### 2. Benchmark Paderborn University (3 Classes: Falhas Reais a 64 kHz)
-*Amostras de teste com fadiga real por estresse mecânico acelerado (1.116 amostras):*
+### 2. Benchmark Paderborn University (3 Classes: Danos Reais Acelerados a 64 kHz)
+*Amostras de teste de ensaios de vida acelerada: K001 saudável, KI14 com fadiga superficial por pitting na pista interna e KA15 com deformação plástica por indentação na pista externa (1.116 amostras):*
 - **BearingCNN:** **99.91%** de acurácia no teste (`val_loss: 0.0024`, apenas 1 erro em 1.116 amostras).
 - **ResNet-18:** **100.00%** de acurácia no teste.
 - **EfficientNet-B0:** **100.00%** de acurácia no teste.
@@ -190,9 +192,27 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 
 ---
 
+## Desempenho Computacional e Viabilidade em Tempo Real
+
+Para avaliar a viabilidade prática em sistemas industriais de monitoramento contínuo (*Condition Monitoring*) e computação de borda (*Edge AI*), mensurou-se o custo computacional teórico (GFLOPs), a pegada de memória (MB) e a latência empírica de inferência unitária (`batch_size = 1`, precedida de *warm-up* e sincronização CUDA) em um ambiente equipado com GPU **NVIDIA GeForce RTX 2060 SUPER (8 GB)** e CPU **AMD Ryzen 5 2600 Six-Core (3,40 GHz)**. O tempo médio de geração do escalograma CWT por janela de 1.024 amostras foi de **$64.06 \pm 5.96\text{ ms}$** na CPU.
+
+| Arquitetura | Parâmetros (M) | Tamanho (MB) | GFLOPs | Inferência CPU (ms) | Inferência GPU (ms) | Pipeline Total CPU (ms) | Pipeline Total GPU (ms) |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **BearingCNN (Autoral)** | **0.52** | **1.99** | **0.556** | **19.60 ± 1.66** | **2.22 ± 0.14** | **83.66** | **66.28** |
+| **ResNet-18** | 11.18 | 42.68 | 3.636 | 42.34 ± 4.02 | 5.17 ± 1.38 | 106.40 | 69.23 |
+| **EfficientNet-B0** | 4.01 | 15.60 | 0.799 | 50.37 ± 4.49 | 12.64 ± 3.92 | 114.43 | 76.70 |
+| **Inception-v3** | 21.79 | 83.48 | 11.459 | 137.04 ± 9.79 | 21.48 ± 4.62 | 201.10 | 85.54 |
+
+<p align="center">
+  <img src="docs/images/desempenho_computacional_comparacao.png" width="850" alt="Comparativo de Desempenho Computacional">
+</p>
+<p align="center"><sub>Análise comparativa das quatro arquiteturas investigadas: (a) parâmetros vs. acurácia no CWRU, (b) tempo de inferência isolada da CNN (CPU vs. GPU) e (c) latência total do pipeline fim a fim (geração CWT + inferência) frente ao orçamento de tempo real de 85.33 ms por janela a 12 kHz.</sub></p>
+
+---
+
 ## Avaliação Cruzada e Análise de Domain Shift (Cross-Domain)
 
-Apesar dos resultados quase perfeitos obtidos em cada bancada individualmente (In-Domain > 99%), a transferência direta (*Zero-Shot Cross-Domain*) de um modelo treinado em um banco de dados para outro sofre com severa degradação devido a variações de velocidade (RPM), diâmetro de rolamento e condições de carga.
+Apesar dos resultados elevados obtidos em cada bancada individualmente (In-Domain > 99%), a transferência direta (*Zero-Shot Cross-Domain*) de um modelo treinado em um banco de dados para outro sofre com severa degradação devido a variações de velocidade (RPM), diâmetro de rolamento e condições de carga.
 
 ### 1. Matriz de Domain Shift no Tempo-Frequência (CWT Tradicional)
 Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero-Shot*):
@@ -206,7 +226,7 @@ Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero
 <p align="center">
   <img src="docs/images/cross_domain_matrix_heatmap.png" width="550" alt="Heatmap da Matriz de Domain Shift Cross-Domain">
 </p>
-<p align="center"><sub>Matriz de transferência cruzada 3x3 no domínio Tempo-Frequência: a diagonal principal exibe a excelência in-domain, enquanto os elementos fora da diagonal revelam a severa barreira de Domain Shift (queda para a faixa de 17% a 33%).</sub></p>
+<p align="center"><sub>Matriz de transferência cruzada 3x3 no domínio Tempo-Frequência: a diagonal principal exibe o desempenho in-domain, enquanto os elementos fora da diagonal revelam a severa barreira de Domain Shift (queda para a faixa de 17% a 33%).</sub></p>
 
 ---
 
@@ -229,7 +249,7 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 > [!NOTE]
 > **Comportamento Físico e Disparidade Operacional:**  
-> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a mais de 2.100 RPM** em estágio terminal de fratura (*run-to-failure*), enquanto o Paderborn opera a 900 RPM com danos incipientes de fadiga (*pitting*). Essa diferença severa de regime energético desloca a fronteira de decisão no *Zero-Shot* e fundamenta a necessidade de calibração por *Few-Shot Learning*.
+> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a mais de 2.100 RPM** em estágio terminal de fratura (*run-to-failure*), enquanto o Paderborn opera a 900 RPM com danos controlados de bancada. Essa diferença severa de regime energético desloca a fronteira de decisão no *Zero-Shot* e fundamenta a necessidade de calibração por *Few-Shot Learning*.
 
 ---
 
@@ -256,6 +276,22 @@ Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrut
   <img src="docs/images/one_shot_k1_time_vs_order_comparison.png" width="750" alt="Comparação 1-Shot Tempo vs Ordens">
 </p>
 <p align="center"><sub>Desempenho no regime extremo de 1-Shot ($K=1$, uma única imagem de calibração por classe): o domínio de Ordens (Order-CWT) acelera e estabiliza a adaptação em comparação ao tempo-frequência clássico.</sub></p>
+
+---
+
+## Limitações Metodológicas e Direções Futuras
+
+Em conformidade com as boas práticas de reprodutibilidade e transparência científica em *Condition Monitoring*, destacam-se as seguintes delimitações do protocolo experimental atual e oportunidades para trabalhos futuros:
+
+1. **Escopo do Particionamento por Arquivo (*In-Domain* vs. *Cross-Domain*):**
+   - No **CWRU**, a divisão ao nível de arquivo (`train_test_split` com `RANDOM_SEED=42` sobre os 40 arquivos `.mat`) garante ausência total de janelas temporais sobrepostas entre treino e teste e avalia a generalização entre diferentes regimes de carga (0 a 3 HP) de uma mesma bancada.
+   - Nos benchmarks **Paderborn** (`K001`, `KI14`, `KA15` sob condição `N09_M07_F10`) e **XJTU-SY** (`Bearing1_1` início, `Bearing1_2` fim e `Bearing2_1` fim), cada classe na avaliação *in-domain* é representada por um rolamento específico ensaiado até a falha. Portanto, a acurácia *in-domain* (~100%) reflete a separabilidade de janelas em arquivos distintos daquele ensaio, enquanto a capacidade real de generalização para **novos rolamentos e novas bancadas** é avaliada nas seções **Cross-Domain** e **Few-Shot**. Trabalhos futuros podem expandir o particionamento intra-dataset do Paderborn e XJTU-SY para validação cruzada entre diferentes códigos de rolamento da mesma classe (*leave-one-bearing-out*).
+2. **Reamostragem Angular em Regime Estacionário vs. Tacômetro Dinâmico:**
+   - Como os ensaios públicos operam sob rotação nominal constante por arquivo e não disponibilizam pulsos ópticos de *keyphasor* uniformizados nas três bancadas, o módulo `src/order_tracking.py` realiza a reamostragem angular assumindo velocidade instantânea constante igual à nominal do arquivo ($f_r = \text{RPM}/60$). Em máquinas sujeitas a rampas severas de partida/parada (*run-up/coast-down*), recomenda-se acoplar a integração da fase instantânea via tacômetro físico ou estimação *tacho-less* de fase.
+3. **Filtragem Anti-Aliasing e Demodulação de Envelope antes da Order-CWT:**
+   - Em taxas de amostragem muito elevadas e baixa rotação (como no Paderborn a $64\text{ kHz}$ e $900\text{ RPM}$, onde 4 voltas abrangem $\sim 17.067$ pontos reduzidos para $4.096$ amostras angulares), a interpolação direta pode sofrer dobramento espectral (*aliasing*) de ressonâncias estruturais de alta frequência (> $7.68\text{ kHz}$). Além disso, como os defeitos de rolamento frequentemente modulam em amplitude bandas de ressonância de alta frequência, a aplicação de um filtro passa-baixas anti-aliasing ou a extração prévia do **envelope de Hilbert** seguida da Order-CWT (*Order-Envelope CWT*) constitui uma evolução promissora para elevar a transferência *zero-shot*.
+4. **Amostragem Aleatória e Múltiplas Sementes no *Few-Shot*:**
+   - Para garantir determinismo estrito, a seleção das $K$ amostras de suporte nos notebooks utiliza os primeiros $K$ arquivos ordenados da partição `train/`. Em extensões futuras, recomenda-se reportar a média e o desvio-padrão sobre múltiplas sementes aleatórias de suporte (*episodic evaluation*).
 
 ---
 
@@ -340,20 +376,20 @@ pip install -r requirements.txt
 
 ### Obtenção e Estruturação dos Dados Brutos
 
-Como o diretório `data/` é protegido e ignorado pelo Git (definido no `.gitignore` para manter o repositório leve e evitar arquivos binários pesados), após clonar o projeto crie a pasta `data/` e posicione os dados originais baixados das fontes oficiais na seguinte estrutura:
+Como o diretório `data/` é protegido e ignorado pelo Git (definido no `.gitignore` para manter o repositório leve e evitar arquivos binários pesados), após clonar o projeto crie a pasta `data/` e posicione os dados originais baixados das fontes oficiais na seguinte estrutura (o parser do CWRU suporta tanto a nomenclatura descritiva abaixo quanto os nomes numéricos originais `97.mat` a `237.mat`):
 
 ```text
 data/
 ├── cwru/
-│   ├── normal/        # Arquivos .mat (ex: 97.mat, 98.mat, 99.mat, 100.mat)
-│   ├── inner_race/    # Arquivos .mat de falha na pista interna (ex: 105.mat, 169.mat, ...)
-│   ├── outer_race/    # Arquivos .mat de falha na pista externa (ex: 130.mat, 197.mat, ...)
-│   └── ball/          # Arquivos .mat de falha no elemento rolante (ex: 118.mat, 185.mat, ...)
+│   ├── normal/        # Ex: Normal_0HP_1797rpm.mat ... Normal_3HP_1730rpm.mat (ou 97.mat a 100.mat)
+│   ├── inner_race/    # Ex: IR007_0HP_1797rpm.mat, IR014_..., IR021_... (ou 105.mat, 169.mat, ...)
+│   ├── outer_race/    # Ex: OR007_6_0HP_1797rpm.mat, OR014_..., OR021_... (ou 130.mat, 197.mat, ...)
+│   └── ball/          # Ex: B007_0HP_1797rpm.mat, B014_..., B021_... (ou 118.mat, 185.mat, ...)
 ├── paderborn/
 │   └── raw/
 │       ├── K001/      # Arquivos .mat de rolamento saudável (ex: N09_M07_F10_K001_1.mat, ...)
-│       ├── KI14/      # Arquivos .mat de dano real na pista interna (ex: N09_M07_F10_KI14_1.mat, ...)
-│       └── KA15/      # Arquivos .mat de dano real na pista externa (ex: N09_M07_F10_KA15_1.mat, ...)
+│       ├── KI14/      # Arquivos .mat de dano real por pitting na pista interna (ex: N09_M07_F10_KI14_1.mat, ...)
+│       └── KA15/      # Arquivos .mat de dano real por indentação na pista externa (ex: N09_M07_F10_KA15_1.mat, ...)
 └── xjtu/
     └── raw/
         ├── 35Hz12kN/  # Pastas Bearing1_1/ e Bearing1_2/ com arquivos .csv (Normal e Outer Race)
@@ -362,11 +398,11 @@ data/
 
 #### Links Oficiais para Download
 
-| Dataset | Fonte Oficial / Repositório | Descrição dos Dados |
+| Dataset | Fonte Oficial / Repositório | Descrição dos Dados e Licença |
 |---|---|---|
-| **CWRU** | [Case Western Reserve Bearing Data Center](https://engineering.case.edu/bearingdatacenter) | Acelerômetro *Drive End* (12 kHz) sob 0 a 3 HP de carga (1.797 a 1.730 RPM). |
-| **Paderborn University** | [Paderborn Bearing Data Center (KAT)](https://mb.uni-paderborn.de/kat/forschung/datacenter/bearing-datacenter) | Sinais de vibração a 64 kHz com falhas reais de fadiga acelerada (K001, KI14, KA15). |
-| **XJTU-SY** | [XJTU-SY Bearing Dataset (GitHub)](https://github.com/cathysiyu/XJTU-SY-bearing-datasets) | Ensaios completos de vida útil (*run-to-failure*) a 25.6 kHz sob diferentes rotações. |
+| **CWRU** | [Case Western Reserve Bearing Data Center](https://engineering.case.edu/bearingdatacenter) | Acelerômetro *Drive End* (12 kHz) sob 0 a 3 HP de carga (1.797 a 1.730 RPM). Uso aberto acadêmico. |
+| **Paderborn University** | [Paderborn Bearing Data Center (KAT)](https://mb.uni-paderborn.de/kat/forschung/datacenter/bearing-datacenter) | Sinais de vibração a 64 kHz com danos reais acelerados (K001, KI14, KA15). Licença acadêmica **CC BY-NC 4.0**. |
+| **XJTU-SY** | [XJTU-SY Bearing Dataset (GitHub)](https://github.com/cathysiyu/XJTU-SY-bearing-datasets) | Ensaios completos de vida útil (*run-to-failure*) a 25.6 kHz sob diferentes rotações. Uso aberto acadêmico. |
 
 ---
 
@@ -428,12 +464,12 @@ Para reproduzir visualmente cada etapa (curvas de convergência, matrizes de con
 
 O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e metodológicos:
 
-1. **Boudiaf, A. et al. (2016):** *Bearing fault diagnosis using continuous wavelet transform and deep neural networks.*
-2. **Guo, X. et al. (2018):** *Deep convolutional transfer learning network: A new method for intelligent fault diagnosis of machines with unseen behaviors.* IEEE TIE.
-3. **Kaya, Y., Kuncan, M., & Ertunç, H. M. (2022):** *Bearing fault diagnosis using continuous wavelet transform and CNN transfer learning.* Applied Soft Computing.
-4. **Lessmeier, C. et al. (2016):** *Condition Monitoring of Bearing Damage in Electromechanical Drive Systems by Using Motor Current Signals of Electric Motors: A Benchmark Data Set for Data-Driven Classification.* Paderborn University.
-5. **Wang, B. et al. (2019):** *A hybrid prognostics approach for estimating remaining useful life of rolling element bearings.* (Dataset XJTU-SY). IEEE TIE.
-6. **He, K. et al. (2016):** *Deep Residual Learning for Image Recognition.* CVPR (ResNet).
+1. **Boudiaf, A. et al. (2016):** *A Comparative Study of Various Methods of Bearing Faults Diagnosis Using the Case Western Reserve University Data*, Journal of Failure Analysis and Prevention, vol. 16, pp. 271–284.
+2. **Guo, L. et al. (2019):** *Deep Convolutional Transfer Learning Network: A New Method for Intelligent Fault Diagnosis of Machines With Unseen Working Conditions*, IEEE Transactions on Industrial Electronics (IEEE TIE), vol. 66, no. 9, pp. 7316–7325.
+3. **Kaya, Y., Kuncan, F., Kaplan, K., Minaz, M. R., & Ertunç, H. M. (2021):** *A new automatic bearing fault size diagnosis using time-frequency images of CWT and deep transfer learning methods*, Turkish Journal of Electrical Engineering and Computer Sciences, vol. 29, no. 5, pp. 2514–2532.
+4. **Lessmeier, C. et al. (2016):** *Condition Monitoring of Bearing Damage in Electromechanical Drive Systems by Using Motor Current Signals of Electric Motors: A Benchmark Data Set for Data-Driven Classification*, PHM Society European Conference (Paderborn University Dataset).
+5. **Wang, B. et al. (2020):** *A Hybrid Prognostics Approach for Estimating Remaining Useful Life of Rolling Element Bearings*, IEEE Transactions on Reliability, vol. 69, no. 1, pp. 401–412 (Dataset XJTU-SY).
+6. **He, K. et al. (2016):** *Deep Residual Learning for Image Recognition*, IEEE Conference on Computer Vision and Pattern Recognition (CVPR), pp. 770–778.
 
 ---
 
@@ -444,7 +480,7 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 - [x] Desenvolvimento da arquitetura própria `BearingCNN` (**95.69%** CWRU, **99.91%** Paderborn, **100.00%** XJTU-SY)
 - [x] Benchmark de *Transfer Learning* com ResNet-18, EfficientNet-B0 e Inception-v3 (**99.87%** CWRU)
 - [x] Diagnóstico binário de integridade com **100.00%** de precisão e recall (zero falsos alarmes e zero falsos negativos)
-- [x] Integração de bancos de dados com falhas reais de fadiga acelerada (Paderborn University e XJTU-SY)
+- [x] Integração de bancos de dados com falhas reais de vida acelerada (Paderborn University e XJTU-SY)
 - [x] Estudo experimental e caracterização da barreira de *Domain Shift* em avaliação cruzada zero-shot
 - [x] Implementação de *Computed Order Tracking* (COT) e Transformada Wavelet em Ângulo-Ordem (Order-CWT)
 - [x] Metodologia de *Few-Shot Domain Adaptation* demonstrando recuperação da acurácia (até **100.00%** e média de **84.38%**) com calibração rápida ($K=1$ a $K=5$)
@@ -458,4 +494,5 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 Engenharia de Computação — Universidade Federal de Pelotas (UFPel)  
 GitHub: [@jvkauer](https://github.com/jvkauer)
 
-Este projeto está licenciado sob os termos da licença [MIT](LICENSE).
+Este projeto (código-fonte e documentação) está licenciado sob os termos da licença [MIT](LICENSE). Os bancos de dados de terceiros utilizados nos experimentos seguem os termos de suas respectivas instituições (incluindo a licença acadêmica **CC BY-NC 4.0** para o dataset da Paderborn University).
+
