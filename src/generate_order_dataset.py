@@ -14,9 +14,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+import re
+from pathlib import Path
 import numpy as np
 from tqdm import tqdm
-from sklearn.model_selection import train_test_split
 
 from src.config import (
     CWRU_DIR,
@@ -39,7 +40,7 @@ from src.config import (
 )
 from src.dataset_cwru import load_cwru_mat_file, get_cwru_strict_splits
 from src.dataset_paderborn import load_paderborn_mat_file, get_paderborn_strict_splits
-from src.dataset_xjtu import load_xjtu_csv_file, extract_xjtu_rpm, get_xjtu_manifest, get_xjtu_strict_splits
+from src.dataset_xjtu import load_xjtu_csv_file, extract_xjtu_rpm, get_xjtu_strict_splits
 from src.order_tracking import resample_to_angle_domain, compute_order_cwt
 from src.cwt_processor import scalogram_to_rgb
 
@@ -77,13 +78,14 @@ def extract_cwru_rpm(file_name: str) -> float:
 
 def extract_paderborn_rpm(file_name: str) -> float:
     """Extrai o RPM do nome do arquivo Paderborn (ex: 'N09_M07_F10_K001_1.mat' -> 900.0)."""
-    if file_name.startswith("N09"):
+    name = Path(file_name).name
+    if name.startswith("N09"):
         return 900.0
-    elif file_name.startswith("N12"):
+    elif name.startswith("N12"):
         return 1200.0
-    elif file_name.startswith("N15"):
+    elif name.startswith("N15"):
         return 1500.0
-    elif file_name.startswith("N04"):
+    elif name.startswith("N04"):
         return 400.0
     raise ValueError(f"Não foi possível identificar o RPM no nome do arquivo Paderborn: {file_name}")
 
@@ -92,23 +94,6 @@ def extract_paderborn_rpm(file_name: str) -> float:
 # =============================================================================
 #  Funções auxiliares para o Two-Pass com Z-Score Global Livre de Data Leakage
 # =============================================================================
-
-def _split_files_list(
-    files: list,
-    train_ratio: float = 0.70,
-    val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
-    seed: int = RANDOM_SEED
-) -> dict:
-    """Divide lista de arquivos em train, val e test evitando data leakage."""
-    temp_ratio = val_ratio + test_ratio
-    train_files, temp_files = train_test_split(
-        files, test_size=temp_ratio, random_state=seed, shuffle=True
-    )
-    val_files, test_files = train_test_split(
-        temp_files, test_size=(test_ratio / temp_ratio), random_state=seed, shuffle=True
-    )
-    return {"train": train_files, "val": val_files, "test": test_files}
 
 
 def _compute_cwru_global_signal_stats(train_files_by_class: dict = None):

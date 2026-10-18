@@ -68,7 +68,7 @@ def process_and_generate_dataset(max_windows_per_file: int = None):
 
                 for window in tqdm(windows, desc=f"      {cls_name}/{split_name}/{mat_file.stem}", leave=False):
                     scalogram_mat = compute_cwt(window)
-                    img_path = dest_dir / f"{cls_name}_{split_name}_{idx:04d}.png"
+                    img_path = dest_dir / f"{cls_name}_{split_name}_{idx:05d}.png"
                     save_scalogram_png(scalogram_mat, str(img_path))
                     idx += 1
                     total_images_saved += 1

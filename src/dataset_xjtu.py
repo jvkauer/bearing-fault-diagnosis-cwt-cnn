@@ -164,8 +164,9 @@ def get_xjtu_strict_splits(
 
 def get_xjtu_manifest(max_files_per_class: int = 30) -> Dict[str, List[Path]]:
     """
-    Retorna o manifesto de arquivos XJTU-SY agregando as partições estritas de
-    treino, validação e teste com falhas puras e rolamentos disjuntos.
+    [EXPLORAÇÃO/INSPEÇÃO] Retorna arquivos XJTU-SY para testes exploratórios.
+    ATENÇÃO: Para treinamento e avaliação sem vazamento de dados, utilize
+    estritamente 'get_xjtu_strict_splits()', que separa rolamentos disjuntos.
 
     Args:
         max_files_per_class (int): Quantidade total de arquivos por classe a retornar (padrão: 30).

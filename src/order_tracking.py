@@ -113,7 +113,7 @@ def compute_order_cwt(
         scales,
         WAVELET,
         sampling_period=1.0 / samples_per_rev,
-        method="conv"
+        method="fft"
     )
     
     return np.abs(coefs_cwt), target_orders

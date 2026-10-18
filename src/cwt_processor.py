@@ -54,7 +54,7 @@ def compute_cwt(signal_window: np.ndarray) -> np.ndarray:
         scales,
         WAVELET,
         sampling_period=1.0 / FS,
-        method="conv"
+        method="fft"
     )
     # Extrair a magnitude dos coeficientes complexos
     scalogram_magnitude = np.abs(coefs_cwt)

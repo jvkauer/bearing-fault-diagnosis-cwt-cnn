@@ -50,7 +50,7 @@ def compute_xjtu_cwt(signal_window: np.ndarray) -> np.ndarray:
         scales,
         WAVELET,
         sampling_period=1.0 / XJTU_FS,
-        method="conv"
+        method="fft"
     )
     return np.abs(coefs_cwt)
 
