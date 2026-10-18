@@ -47,7 +47,8 @@ def extract_xjtu_rpm(file_path: Path) -> float:
         return 2250.0
     elif "40Hz" in path_str:
         return 2400.0
-    return 2100.0
+    raise ValueError(f"Não foi possível identificar o RPM no caminho XJTU-SY: {file_path}")
+
 
 
 def segment_xjtu_signal(

@@ -1,7 +1,8 @@
 """
 Módulo de Computed Order Tracking (COT) e Transformada Wavelet Ângulo-Ordem (Order-CWT).
-Transforma sinais temporais em sinais amostrados no domínio angular (voltas do eixo),
-garantindo invariância à velocidade de rotação (RPM) para diagnóstico de falhas em rolamentos.
+Realiza a reamostragem angular a partir da velocidade nominal estacionária de cada ensaio
+(tacômetro virtual em regime constante), transformando sinais temporais em sinais amostrados
+no domínio angular (voltas do eixo) para garantir invariância à rotação (RPM).
 """
 
 from typing import Tuple, Optional

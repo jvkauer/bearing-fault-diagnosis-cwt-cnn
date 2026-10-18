@@ -188,6 +188,7 @@ def train_and_evaluate_bearing_cnn(
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
     best_val_loss = float("inf")
+    best_val_acc = 0.0
     checkpoint_path = Path(checkpoint_name)
     
     history = {
@@ -245,6 +246,7 @@ def train_and_evaluate_bearing_cnn(
         
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
+            best_val_acc = epoch_val_acc
             torch.save(model.state_dict(), checkpoint_path)
             status_msg = f"[CHECKPOINT] Modelo ótimo salvo na época {epoch:02d}/{num_epochs:02d}."
         else:
@@ -277,7 +279,7 @@ def train_and_evaluate_bearing_cnn(
     return {
         "model_name": "bearing_cnn",
         "history": history,
-        "best_val_acc": max(history["val_acc"]),
+        "best_val_acc": best_val_acc,
         "test_acc": test_acc,
         "test_preds": test_preds,
         "test_labels": test_labels,

@@ -212,7 +212,7 @@ Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero
 
 ### 2. Avaliação Cruzada no Domínio Ângulo-Ordem (Order-CWT)
 
-Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (COT), neutraliza-se o efeito da velocidade de rotação (RPM). O impacto é expressivo no par **CWRU $\leftrightarrow$ Paderborn**:
+Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (COT, utilizando a velocidade nominal estacionária de cada ensaio como tacômetro virtual) combinado à padronização global (*Z-score* e limites de escala `vmin`/`vmax` estimados estritamente na partição de treino), neutraliza-se o efeito da velocidade de rotação (RPM). O impacto é expressivo no par **CWRU $\leftrightarrow$ Paderborn**:
 
 | Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Variação Absoluta |
 |---|:---:|:---:|:---:|
@@ -229,13 +229,13 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 > [!NOTE]
 > **Comportamento Físico e Disparidade Operacional:**  
-> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a mais de 2.100 RPM**, enquanto o Paderborn opera a 900 RPM com carga nominal leve. A vibração normal sob 12 kN possui energia superior à falha de pista do Paderborn, gerando um deslocamento de escala de amplitude. Esse fenômeno delimita a fronteira física da técnica e fundamenta a necessidade de calibração por *Few-Shot Learning*.
+> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a mais de 2.100 RPM** em estágio terminal de fratura (*run-to-failure*), enquanto o Paderborn opera a 900 RPM com danos incipientes de fadiga (*pitting*). Essa diferença severa de regime energético desloca a fronteira de decisão no *Zero-Shot* e fundamenta a necessidade de calibração por *Few-Shot Learning*.
 
 ---
 
 ## Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)
 
-Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe da máquina-alvo, a ResNet-18 ajusta seus pesos rapidamente em 15 épocas de calibração:
+Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe extraídas estritamente da partição `train/` da máquina-alvo (mantendo a partição `test/` 100% isolada para avaliação), a ResNet-18 ajusta seus pesos rapidamente em 15 épocas de calibração:
 
 | Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Variação ($K=0 \rightarrow K=5$) |
 |---|:---:|:---:|:---:|:---:|

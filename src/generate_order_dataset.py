@@ -44,6 +44,18 @@ from src.order_tracking import resample_to_angle_domain, compute_order_cwt
 from src.cwt_processor import scalogram_to_rgb
 
 
+_CWRU_NUMERIC_RPM_MAP = {
+    "97": 1797.0, "105": 1797.0, "118": 1797.0, "130": 1797.0,
+    "169": 1797.0, "185": 1797.0, "197": 1797.0, "209": 1797.0, "222": 1797.0, "234": 1797.0,
+    "98": 1772.0, "106": 1772.0, "119": 1772.0, "131": 1772.0,
+    "170": 1772.0, "186": 1772.0, "198": 1772.0, "210": 1772.0, "223": 1772.0, "235": 1772.0,
+    "99": 1750.0, "107": 1750.0, "120": 1750.0, "132": 1750.0,
+    "171": 1750.0, "187": 1750.0, "199": 1750.0, "211": 1750.0, "224": 1750.0, "236": 1750.0,
+    "100": 1730.0, "108": 1730.0, "121": 1730.0, "133": 1730.0,
+    "172": 1730.0, "188": 1730.0, "200": 1730.0, "212": 1730.0, "225": 1730.0, "237": 1730.0,
+}
+
+
 def extract_cwru_rpm(file_name: str) -> float:
     """Extrai o RPM do nome do arquivo CWRU (ex: 'B007_0HP_1797rpm.mat' -> 1797.0)."""
     match = re.search(r"(\d+)rpm", file_name, re.IGNORECASE)
@@ -57,7 +69,10 @@ def extract_cwru_rpm(file_name: str) -> float:
         return 1750.0
     elif "3HP" in file_name:
         return 1730.0
-    return 1772.0
+    stem = Path(file_name).stem
+    if stem in _CWRU_NUMERIC_RPM_MAP:
+        return _CWRU_NUMERIC_RPM_MAP[stem]
+    raise ValueError(f"Não foi possível identificar o RPM no nome do arquivo CWRU: {file_name}")
 
 
 def extract_paderborn_rpm(file_name: str) -> float:
@@ -68,7 +83,10 @@ def extract_paderborn_rpm(file_name: str) -> float:
         return 1200.0
     elif file_name.startswith("N15"):
         return 1500.0
-    return 900.0
+    elif file_name.startswith("N04"):
+        return 400.0
+    raise ValueError(f"Não foi possível identificar o RPM no nome do arquivo Paderborn: {file_name}")
+
 
 
 # =============================================================================
