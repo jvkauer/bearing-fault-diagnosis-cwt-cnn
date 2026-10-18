@@ -57,7 +57,8 @@ IMG_WIDTH = 224     # pixels (largura/tempo)
 BATCH_SIZE = 32
 LEARNING_RATE = 0.00005  # 5e-5 (ponto ótimo determinado no estudo de ablação)
 NUM_EPOCHS = 10
-DROPOUT_RATE = 0.3       # 0.3 (preserva harmônicos espectrais na camada de classificação)
+DROPOUT_RATE = 0.3       # 0.3 (taxa de regularização definida no estudo de ablação)
+
 
 # Seed para reprodutibilidade dos experimentos
 RANDOM_SEED = 42
