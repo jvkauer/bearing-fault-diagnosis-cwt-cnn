@@ -248,6 +248,7 @@ def train_and_evaluate_bearing_cnn(
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
             best_val_acc = epoch_val_acc
+            checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(model.state_dict(), checkpoint_path)
             status_msg = f"[CHECKPOINT] Modelo ótimo salvo na época {epoch:02d}/{num_epochs:02d}."
         else:
@@ -258,7 +259,7 @@ def train_and_evaluate_bearing_cnn(
               f"Val Loss: {epoch_val_loss:.4f} - Acc: {epoch_val_acc:.2f}% {status_msg}")
         
     print(f"\n[INFO] Carregando pesos do melhor modelo salvo ({checkpoint_path})...")
-    model.load_state_dict(torch.load(checkpoint_path, weights_only=True))
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device, weights_only=True))
     model.eval()
     
     test_preds, test_labels = [], []

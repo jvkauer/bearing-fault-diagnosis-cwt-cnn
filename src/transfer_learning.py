@@ -191,7 +191,8 @@ def train_and_evaluate_transfer_model(
     """
     set_seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    img_size = 299 if model_name == "inception_v3" else 224
+    model_name_clean = model_name.lower().replace("-", "_")
+    img_size = 299 if model_name_clean == "inception_v3" else 224
     
     train_loader, val_loader, test_loader, classes = get_transfer_dataloaders(
         img_size=img_size, data_dir=data_dir, seed=seed
@@ -265,6 +266,7 @@ def train_and_evaluate_transfer_model(
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
             best_val_acc = epoch_val_acc
+            checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(model.state_dict(), checkpoint_path)
             status_msg = f"[CHECKPOINT] Modelo ótimo salvo na época {epoch:02d}/{num_epochs:02d}."
         else:
@@ -275,7 +277,7 @@ def train_and_evaluate_transfer_model(
               f"Val Loss: {epoch_val_loss:.4f} - Acc: {epoch_val_acc:.2f}% {status_msg}")
         
     print(f"\n[INFO] Carregando pesos do melhor modelo salvo ({checkpoint_path})...")
-    model.load_state_dict(torch.load(checkpoint_path, weights_only=True))
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device, weights_only=True))
     model.eval()
     
     test_preds, test_labels = [], []

@@ -69,7 +69,9 @@ def process_and_generate_paderborn_dataset(
     num_train_files: int = 8,
     num_val_files: int = 4,
     num_test_files: int = 5,
-    max_windows_per_file: int = 25
+    max_windows_per_file: int = 25,
+    max_files_per_class: int = None,
+    **kwargs
 ):
     """
     Gera o dataset de escalogramas CWT para o Paderborn com Divisão Estrita Inter-Condições Operacionais:

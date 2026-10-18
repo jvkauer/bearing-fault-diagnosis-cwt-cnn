@@ -68,7 +68,9 @@ def process_and_generate_xjtu_dataset(
     num_train_files: int = 16,
     num_val_files: int = 12,
     num_test_files: int = 10,
-    max_windows_per_file: int = 15
+    max_windows_per_file: int = 15,
+    max_files_per_class: int = None,
+    **kwargs
 ):
     """
     Gera o dataset de escalogramas CWT para o XJTU-SY com Divisão Estrita Leave-Bearing-Out:

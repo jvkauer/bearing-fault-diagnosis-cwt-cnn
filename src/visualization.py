@@ -3,7 +3,8 @@ Módulo de Visualização de Sinais, Escalogramas CWT e Curvas de Aprendizado.
 Fornece funções para plotagem de figuras acadêmicas (Padrão Monografia TCC) e curvas de treino/validação.
 """
 
-from typing import Optional, Dict, Any
+from pathlib import Path
+from typing import Optional, Dict, Any, Callable
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -16,7 +17,11 @@ from src.cwt_processor import compute_cwt
 def plot_monograph_figure(
     signal_window: np.ndarray,
     title: str = "Diagnóstico de Falha em Rolamento",
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
+    fs: int = FS,
+    freq_min: float = FREQ_MIN,
+    freq_max: float = FREQ_MAX,
+    cwt_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None
 ):
     """
     Gera e exibe o gráfico no padrão da Monografia TCC (Figura 5):
@@ -27,12 +32,19 @@ def plot_monograph_figure(
         signal_window (np.ndarray): Janela do sinal de vibração (1D).
         title (str): Título principal do gráfico.
         save_path (str, optional): Caminho para salvar a figura em PNG/PDF.
+        fs (int): Taxa de amostragem em Hz (padrão: FS do CWRU = 12000).
+        freq_min (float): Frequência mínima em Hz (padrão: FREQ_MIN = 10).
+        freq_max (float): Frequência máxima em Hz (padrão: FREQ_MAX = 6000).
+        cwt_fn (callable, optional): Função personalizada para cálculo de CWT.
     """
-    time_vector = np.arange(len(signal_window)) / FS
-    target_freqs = np.linspace(FREQ_MIN, FREQ_MAX, IMG_HEIGHT)
+    time_vector = np.arange(len(signal_window)) / fs
+    target_freqs = np.linspace(freq_min, freq_max, IMG_HEIGHT)
     
     # Calcular magnitude da CWT
-    scalogram_mat = compute_cwt(signal_window)
+    if cwt_fn is not None:
+        scalogram_mat = cwt_fn(signal_window)
+    else:
+        scalogram_mat = compute_cwt(signal_window)
     
     fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
     
@@ -69,6 +81,7 @@ def plot_monograph_figure(
     plt.tight_layout()
     
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"[INFO] Figura salva em: {save_path}")
         
@@ -142,6 +155,7 @@ def plot_training_curves(
     plt.tight_layout()
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"[INFO] Figura salva em: {save_path}")
 
@@ -179,6 +193,7 @@ def plot_confusion_matrix(
     plt.tight_layout()
     
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"[INFO] Figura salva em: {save_path}")
         
