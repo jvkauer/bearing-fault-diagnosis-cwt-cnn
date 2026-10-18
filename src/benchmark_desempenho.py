@@ -172,7 +172,7 @@ def load_benchmark_dataframe(csv_path: Path = RESULTS_DIR / "benchmark_desempenh
     return pd.read_csv(csv_path, comment="#")
 
 
-def plot_performance_comparison(df: pd.DataFrame = None, cwt_ms: float = 61.10,
+def plot_performance_comparison(df: pd.DataFrame = None, cwt_ms: float = 64.06,
                                 window_ms: float = 85.33, save_path: Path = None):
     """
     Gera uma figura com 3 painéis comparando o desempenho computacional das 4 arquiteturas:
