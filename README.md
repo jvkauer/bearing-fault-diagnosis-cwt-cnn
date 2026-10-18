@@ -356,9 +356,8 @@ data/
 │       └── KA15/      # Arquivos .mat de dano real na pista externa (ex: N09_M07_F10_KA15_1.mat, ...)
 └── xjtu/
     └── raw/
-        ├── 35Hz12kN/  # Pastas Bearing1_1/, Bearing1_2/, Bearing1_3/ com arquivos .csv
-        ├── 37.5Hz11kN/# Pastas Bearing2_1/, Bearing2_2/, Bearing2_5/ com arquivos .csv
-        └── 40Hz10kN/  # Pastas Bearing3_4/, etc. com arquivos .csv
+        ├── 35Hz12kN/  # Pastas Bearing1_1/ e Bearing1_2/ com arquivos .csv (Normal e Outer Race)
+        └── 37.5Hz11kN/# Pasta Bearing2_1/ com arquivos .csv (Inner Race)
 ```
 
 #### Links Oficiais para Download

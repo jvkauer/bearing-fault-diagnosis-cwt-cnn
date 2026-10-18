@@ -84,71 +84,70 @@ def _sort_csvs_numerically(folder: Path) -> List[Path]:
 
 def get_xjtu_manifest(max_files_per_class: int = 30) -> Dict[str, List[Path]]:
     """
-    Monta o manifesto de arquivos por classe para o dataset XJTU-SY.
+    Monta o manifesto balanceado de arquivos por classe para o dataset XJTU-SY.
 
-    Regras de seleção baseadas na evolução acelerada de falhas (Run-to-failure):
-      - 'normal': Arquivos iniciais (1.csv a 25.csv) de rolamentos novos em teste.
-      - 'outer_race': Últimos arquivos de rolamentos com falha comprovada na pista externa.
-      - 'inner_race': Últimos arquivos de rolamentos com falha comprovada na pista interna.
+    Regras de seleção baseadas nos ensaios acelerados de vida útil (Run-to-Failure):
+      - 'normal': Primeiros 15 arquivos (1.csv a 15.csv) dos rolamentos Bearing1_1
+        e Bearing1_2 na condição 35Hz12kN (início saudável do ensaio, 30 arquivos).
+      - 'outer_race': Últimos 15 arquivos dos rolamentos Bearing1_1 e Bearing1_2 na
+        condição 35Hz12kN (estágio final com falha severa na pista externa, 30 arquivos).
+      - 'inner_race': Últimos 30 arquivos do rolamento Bearing2_1 na condição
+        37.5Hz11kN (estágio final com falha severa na pista interna; selecionado na
+        segunda condição operacional pois a condição 35Hz12kN não possui nenhum
+        ensaio com falha isolada na pista interna).
 
     Args:
-        max_files_per_class (int): Quantidade balanceada de arquivos por classe.
+        max_files_per_class (int): Quantidade balanceada de arquivos por classe (padrão: 30).
 
     Returns:
         Dict[str, List[Path]]: Dicionário mapeando cada classe à sua lista de arquivos CSV.
     """
     manifest = {cls: [] for cls in XJTU_CLASSES}
+    n_total = max_files_per_class if max_files_per_class else 30
+    n_half = n_total // 2
 
     # -------------------------------------------------------------------------
-    # 1. CLASSE NORMAL (Arquivos iniciais de rolamentos saudáveis)
+    # 1. CLASSE NORMAL (Arquivos iniciais de rolamentos saudáveis - 35Hz12kN)
     # -------------------------------------------------------------------------
     normal_candidates = []
     for cond, b_name in [
         ("35Hz12kN", "Bearing1_1"),
         ("35Hz12kN", "Bearing1_2"),
-        ("37.5Hz11kN", "Bearing2_1"),
-        ("37.5Hz11kN", "Bearing2_2")
     ]:
         folder = XJTU_RAW_DIR / cond / b_name
         files = _sort_csvs_numerically(folder)
-        # Pega os primeiros 15 arquivos de cada teste inicial
-        normal_candidates.extend(files[:15])
+        normal_candidates.extend(files[:n_half])
 
-    manifest["normal"] = normal_candidates[:max_files_per_class] if max_files_per_class else normal_candidates
+    manifest["normal"] = normal_candidates[:n_total]
 
     # -------------------------------------------------------------------------
-    # 2. CLASSE PISTA EXTERNA (Outer Race - Últimos arquivos com dano severo)
+    # 2. CLASSE PISTA EXTERNA (Outer Race - Estágio final com dano severo - 35Hz12kN)
     # -------------------------------------------------------------------------
     outer_candidates = []
     for cond, b_name in [
         ("35Hz12kN", "Bearing1_1"),
         ("35Hz12kN", "Bearing1_2"),
-        ("35Hz12kN", "Bearing1_3"),
-        ("37.5Hz11kN", "Bearing2_2"),
-        ("37.5Hz11kN", "Bearing2_5")
     ]:
         folder = XJTU_RAW_DIR / cond / b_name
         files = _sort_csvs_numerically(folder)
         if files:
-            # Pega os últimos 15 arquivos antes da falha total
-            outer_candidates.extend(files[-15:])
+            outer_candidates.extend(files[-n_half:])
 
-    manifest["outer_race"] = outer_candidates[:max_files_per_class] if max_files_per_class else outer_candidates
+    manifest["outer_race"] = outer_candidates[:n_total]
 
     # -------------------------------------------------------------------------
-    # 3. CLASSE PISTA INTERNA (Inner Race - Últimos arquivos com dano severo)
+    # 3. CLASSE PISTA INTERNA (Inner Race - Estágio final com dano severo - 37.5Hz11kN)
     # -------------------------------------------------------------------------
     inner_candidates = []
     for cond, b_name in [
         ("37.5Hz11kN", "Bearing2_1"),
-        ("40Hz10kN", "Bearing3_4")
     ]:
         folder = XJTU_RAW_DIR / cond / b_name
         files = _sort_csvs_numerically(folder)
         if files:
-            # Pega os últimos 30 arquivos antes da quebra
-            inner_candidates.extend(files[-30:])
+            inner_candidates.extend(files[-n_total:])
 
-    manifest["inner_race"] = inner_candidates[:max_files_per_class] if max_files_per_class else inner_candidates
+    manifest["inner_race"] = inner_candidates[:n_total]
 
     return manifest
+
