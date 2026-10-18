@@ -63,6 +63,7 @@ def get_transfer_dataloaders(
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     
+    data_dir = Path(data_dir)
     train_dir = data_dir / "train"
     val_dir = data_dir / "val"
     test_dir = data_dir / "test"

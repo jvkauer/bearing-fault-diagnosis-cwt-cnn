@@ -125,7 +125,7 @@ flowchart TD
         B2["Computed Order Tracking (COT)<br/>(1024 amostras/rev, 4 voltas)"]
         C1["CWT Tempo-Frequência<br/>(cmor1.5-1.0 | 10 Hz a Nyquist)"]
         C2["Order-CWT Ângulo-Ordem<br/>(cmor1.5-1.0 | 0.5 a 15.0 ordens)"]
-        D["Escalogramas 224x224 RGB<br/>(Normalização por Percentil 1-99)"]
+        D["Escalogramas 224x224 RGB<br/>(Percentil 1-99 / Z-Score Global)"]
     end
 
     subgraph Modelos["3. Aprendizado Profundo"]
