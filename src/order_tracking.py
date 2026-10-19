@@ -20,7 +20,7 @@ from src.config import WAVELET, IMG_HEIGHT
 def get_order_scales(
     samples_per_rev: int = 1024,
     order_min: float = 0.5,
-    order_max: float = 15.0,
+    order_max: float = 20.0,
     num_scales: int = IMG_HEIGHT
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calcula e armazena em cache as escalas da wavelet para o domínio de ordens."""
@@ -90,7 +90,7 @@ def compute_order_cwt(
     angle_signal: np.ndarray,
     samples_per_rev: int = 1024,
     order_min: float = 0.5,
-    order_max: float = 15.0,
+    order_max: float = 20.0,
     num_scales: int = IMG_HEIGHT
 ) -> Tuple[np.ndarray, np.ndarray]:
     """

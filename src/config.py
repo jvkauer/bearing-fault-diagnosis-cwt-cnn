@@ -109,7 +109,7 @@ ORDER_XJTU_DIR = ORDER_TRACKING_DIR / "xjtu"
 ORDER_SAMPLES_PER_REV = 1024  # Amostras uniformes por volta do eixo
 ORDER_NUM_REVS = 4            # Janela de 4 voltas completas do eixo
 ORDER_MIN = 0.5               # Ordem mínima (0.5x da rotação do eixo)
-ORDER_MAX = 15.0              # Ordem máxima (15x da rotação do eixo)
+ORDER_MAX = 20.0              # Ordem máxima (20x da rotação do eixo, cobrindo harmônicos até 3x BPFI)
 
 # ==============================================================================
 # 7. Parâmetros do Dataset XJTU-SY
