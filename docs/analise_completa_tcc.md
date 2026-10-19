@@ -105,9 +105,9 @@ Para garantir validade científica de nível de publicação, este projeto adoto
 
 Sob o particionamento estrito acima, os modelos treinados e testados dentro do mesmo banco de dados apresentaram desempenho quase perfeito:
 
-* **CWRU:** ResNet-18 alcançou **$99{,}87\%$** no teste (3 erros em 2.368 amostras sob carga de 3 HP);
-* **Paderborn:** Todas as arquiteturas convolucionais alcançaram **$100{,}00\%$** no teste inédito a $0{,}1\text{ Nm}$;
-* **XJTU-SY:** Todas as arquiteturas convolucionais alcançaram **$100{,}00\%$** no teste com rolamentos físicos inéditos a $2.400\text{ RPM}$;
+* **CWRU (3.081 amostras sob 3 HP a 1.730 RPM):** ResNet-18 = **$99{,}97\%$**, Inception-v3 = **$99{,}25\%$**, EfficientNet-B0 = **$97{,}96\%$**, BearingCNN = **$97{,}44\%$**;
+* **Paderborn (375 amostras sob 0.1 Nm a 1.500 RPM):** Todas as arquiteturas alcançaram **$100{,}00\%$** no teste;
+* **XJTU-SY (450 amostras sob 10 kN a 2.400 RPM em rolamentos físicos inéditos - Leave-Bearing-Out):** ResNet-18 = **$95{,}78\%$**, EfficientNet-B0 = **$95{,}56\%$**, Inception-v3 = **$95{,}33\%$**, BearingCNN (treinada do zero) = **$71{,}78\%$** (o único benchmark não-trivial intra-domínio);
 * **Order-CWT In-Domain:** CWRU = **$100{,}00\%$**, Paderborn = **$100{,}00\%$**, XJTU-SY = **$100{,}00\%$**.
 
 ### Análise de Viabilidade em Tempo Real (*Edge AI*)
@@ -134,12 +134,12 @@ Ao testar a transferência direta de um modelo treinado em um banco de dados par
 │ CWRU -> Paderborn        │          19.20%          │          43.46%          │     +24.26 pp (Ganho)    │
 │ Paderborn -> CWRU        │          26.23%          │          54.75%          │     +28.52 pp (Ganho)    │
 │ CWRU -> XJTU-SY          │           1.33%          │          30.14%          │     +28.81 pp (Ganho)    │
-│ Paderborn -> XJTU-SY     │          66.67%*         │          33.19%          │     Recuperação Real     │
+│ Paderborn -> XJTU-SY     │          66.67%          │          33.19%          │     -33.48 pp            │
 │ XJTU-SY -> CWRU          │          20.79%          │          14.86%          │     -5.93 pp             │
-│ XJTU-SY -> Paderborn     │          35.20%*         │           3.00%          │     -32.20 pp (Carga)    │
+│ XJTU-SY -> Paderborn     │          35.20%          │           3.00%          │     -32.20 pp (Carga)    │
 └──────────────────────────┴──────────────────────────┴──────────────────────────┴──────────────────────────┘
 ```
-*\*Nota: No domínio do tempo, valores de 66.67% e 35.20% decorriam de colapso de predição em classes majoritárias (normal/outer).*
+*Nota: No tempo, a acurácia de 66.67% em Paderborn -> XJTU decorre de recall 0% em inner_race (todas as 150 amostras de inner classificadas como normal ou outer, enquanto normal e outer acertam 100%). Em ordens, o modelo colapsa prevendo apenas normal (33.19%). Ambos os modelos falham na pista interna sob a carga severa de 12 kN.*
 
 ### Interpretação dos Resultados Zero-Shot:
 1. **O Colapso do Tempo:** A CWT tradicional colapsa para patamares aleatórios ou quase nulos ($1{,}33\%$ a $26{,}23\%$). A rede treinada a $1.797\text{ RPM}$ não consegue encontrar os harmônicos a $1.500\text{ RPM}$ ou $2.400\text{ RPM}$.
@@ -154,15 +154,15 @@ Para resolver o gap remanescente de carregamento mecânico e ruído de bancada, 
 
 ### 6.1 Matriz Tripartite Completa de Adaptação
 
-| Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Salto Total ($K=0 \rightarrow K=5$) |
-| :--- | :---: | :---: | :---: | :---: |
-| **CWRU $\rightarrow$ Paderborn** | 43,46% | 50,62% | **95,27%** | <span style="color:green">**+51,81 pp**</span> |
-| **Paderborn $\rightarrow$ CWRU** | 54,75% | 27,06% | **78,81%** | <span style="color:green">**+24,06 pp**</span> |
-| **CWRU $\rightarrow$ XJTU-SY** | 30,14% | 99,58% | **100,00%** | <span style="color:green">**+69,86 pp**</span> |
-| **XJTU-SY $\rightarrow$ CWRU** | 14,86% | 56,29% | **92,40%** | <span style="color:green">**+77,54 pp**</span> |
-| **Paderborn $\rightarrow$ XJTU-SY** | 33,19% | 59,27% | **94,04%** | <span style="color:green">**+60,85 pp**</span> |
-| **XJTU-SY $\rightarrow$ Paderborn** | 3,00% | 53,49% | **91,10%** | <span style="color:green">**+88,10 pp**</span> |
-| **MÉDIA TRIPARTITE** | **29,90%** | **57,72%** | <span style="color:green">**91,94%**</span> | <span style="color:green">**+62,04 pp**</span> |
+| Origem $\rightarrow$ Destino | Zero-Shot Tempo | Zero-Shot Ordem | One-Shot ($K=1$) Tempo | One-Shot ($K=1$) Ordem | Few-Shot ($K=5$) Tempo | Few-Shot ($K=5$) Ordem | Análise Técnica |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **74,46%** | 50,62% | 79,17% | **95,27%** | **Ordem supera tempo por +16,10 pp em danos industriais acelerados (K=5)** |
+| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **74,49%** | 27,06% | **97,48%** | 78,81% | Ordem vence no Zero-Shot (+28 pp); Tempo memoriza carcaça CWRU no Few-Shot |
+| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 97,09% | **99,58%** | **100,00%** | **100,00%** | Empate em 100% com K=5; Ordem superior em Zero-Shot e One-Shot |
+| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | **74,88%** | 56,29% | **98,37%** | 92,40% | Ambos convergem para >92% no Few-Shot |
+| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **95,53%** | 59,27% | **100,00%** | 94,04% | Tempo memoriza ressonância XJTU (Scratch do zero atinge 100%) |
+| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **68,01%** | 53,49% | **93,33%** | 91,10% | Ambos convergem para >91% no Few-Shot |
+| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **80,74%** | 57,72% | **94,73%** | **91,94%** | **Alta eficácia em poucas amostras nas duas representações** |
 
 ```
 Evolução Média Tripartite (Order-CWT):

@@ -199,17 +199,20 @@ flowchart TD
 
 ## Resultados Intra-Domínio (In-Domain)
 
-Resultados obtidos em amostras inéditas de teste utilizando **particionamento estrito baseado em arquivos `.mat` e `.csv` originais** (eliminando qualquer possibilidade de vazamento de dados decorrente de sobreposição de janelas):
+Resultados obtidos em amostras de teste utilizando **particionamento estrito baseado em arquivos brutos**, prevenindo vazamento de dados temporal (*data leakage*) por sobreposição de janelas e isolando variáveis operacionais críticas:
+* **CWRU:** Isolamento de carga mecânica e velocidade (*Leave-One-Load-Out*, teste sob 3 HP / $1.730\text{ RPM}$ inédito no treino);
+* **Paderborn:** Isolamento de regime de torque (*Leave-Operating-Condition-Out*, teste sob condição de torque reduzido $0{,}1\text{ Nm}$ inédito no treino);
+* **XJTU-SY:** Isolamento rigoroso de rolamentos físicos (*Leave-Bearing-Out*, 9 mancais mutuamente exclusivos, com teste operando em 3 rolamentos e rotação de $2.400\text{ RPM}$ totalmente inéditos).
 
 ### 1. Benchmark CWRU (4 Classes: Normal, Pista Interna, Pista Externa, Esfera)
-*2.368 amostras de teste a 12 kHz, $1.797\text{ RPM}$:*
+*3.081 amostras de teste sob carga de 3 HP a 12 kHz, $1.730\text{ RPM}$ (condição inédita no treino):*
 
 | Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
 |---|---|:---:|:---:|:---:|
-| **ResNet-18** | Fine-Tuning (`Freeze=False`) | **99.87%** | **100.00%** | 11,18 M |
-| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **98.86%** | **100.00%** | 4,01 M |
-| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **96.92%** | **100.00%** | 21,79 M |
-| **BearingCNN (Própria)** | Treino do Zero | **95.69%** | **100.00%** | 0,52 M |
+| **ResNet-18** | Fine-Tuning (`Freeze=False`) | **99.97%** | **100.00%** | 11,18 M |
+| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **99.25%** | **100.00%** | 21,79 M |
+| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **97.96%** | **100.00%** | 4,01 M |
+| **BearingCNN (Própria)** | Treino do Zero | **97.44%** | **100.00%** | 0,52 M |
 
 <p align="center">
   <b>Curvas de Aprendizado (Perda e Acurácia — ResNet-18)</b><br>
@@ -217,24 +220,32 @@ Resultados obtidos em amostras inéditas de teste utilizando **particionamento e
 </p>
 
 <p align="center">
-  <b>Matriz de Confusão no Teste Inédito (ResNet-18 — 99.87% de Acurácia)</b><br>
+  <b>Matriz de Confusão no Teste Inédito (ResNet-18 — 99.97% de Acurácia)</b><br>
   <img src="docs/images/confusion_matrix_resnet.png" width="480" alt="Matriz de Confusão ResNet-18">
 </p>
-<p align="center"><sub>Curvas de convergência de treino/validação com checkpointing automático e respectiva Matriz de Confusão da ResNet-18 no conjunto de teste do CWRU (apenas 3 erros em 2.368 predições).</sub></p>
+<p align="center"><sub>Curvas de convergência de treino/validação com checkpointing automático e respectiva Matriz de Confusão da ResNet-18 no conjunto de teste do CWRU sob 3 HP (apenas 1 erro em 3.081 predições).</sub></p>
 
-### 2. Benchmark Paderborn University (3 Classes: Danos Reais Acelerados a 64 kHz)
-*Amostras de teste de ensaios de vida acelerada: K001 saudável, KI14 com fadiga superficial por pitting na pista interna e KA15 com deformação plástica por indentação na pista externa (1.116 amostras):*
-- **BearingCNN:** **99.91%** de acurácia no teste (`val_loss: 0.0024`, apenas 1 erro em 1.116 amostras).
-- **ResNet-18:** **100.00%** de acurácia no teste.
-- **EfficientNet-B0:** **100.00%** de acurácia no teste.
-- **Inception-v3:** **100.00%** de acurácia no teste.
+### 2. Benchmark Paderborn University (3 Classes: Danos Industriais Acelerados a 64 kHz)
+*375 amostras de teste da condição inédita `N15_M01_F10` ($1.500\text{ RPM}, 0{,}1\text{ Nm}, 1.000\text{ N}$): K001 saudável, KI14 com fadiga superficial por pitting na pista interna e KA15 com deformação plástica por indentação na pista externa:*
+| Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
+|---|---|:---:|:---:|:---:|
+| **ResNet-18** | Fine-Tuning (`Freeze=False`) | **100.00%** | **100.00%** | 11,18 M |
+| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **100.00%** | **100.00%** | 4,01 M |
+| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **100.00%** | **100.00%** | 21,79 M |
+| **BearingCNN (Própria)** | Treino do Zero | **100.00%** | **100.00%** | 0,52 M |
 
-### 3. Benchmark XJTU-SY (3 Classes: Degradação Acelerada a 25.6 kHz)
-*Amostras de teste obtidas em ensaios contínuos de run-to-failure (465 amostras):*
-- **BearingCNN:** **100.00%** de acurácia no teste.
-- **ResNet-18:** **100.00%** de acurácia no teste.
-- **EfficientNet-B0:** **100.00%** de acurácia no teste.
-- **Inception-v3:** **100.00%** de acurácia no teste.
+### 3. Benchmark XJTU-SY (3 Classes: Degradação Acelerada sob 10 kN a 25.6 kHz)
+*450 amostras de teste sob condição inédita de $40\text{ Hz} / 10\text{ kN}$ ($2.400\text{ RPM}$) avaliando 3 rolamentos físicos exclusivos e nunca vistos durante o treinamento (`Bearing3_1` normal, `Bearing3_4` pista interna pura e `Bearing3_5` pista externa pura):*
+| Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
+|---|---|:---:|:---:|:---:|
+| **ResNet-18** | Fine-Tuning (`Freeze=False`) | **95.78%** | **99.78%** | 11,18 M |
+| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **95.56%** | **98.22%** | 4,01 M |
+| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **95.33%** | **99.56%** | 21,79 M |
+| **BearingCNN (Própria)** | Treino do Zero | **71.78%** | **95.33%** | 0,52 M |
+
+> [!NOTE]
+> **O Desafio do Reconhecimento em Rolamentos Inéditos:**  
+> O XJTU-SY é o único benchmark verdadeiramente não-trivial no regime intra-domínio, pois seu teste opera com rolamentos físicos mutuamente exclusivos (*Leave-Bearing-Out*). A BearingCNN (0,52 M parâmetros treinada do zero) atinge 71,78% de acurácia multiclasse (embora mantenha 95,33% na detecção binária de falha). Em contrapartida, os modelos de Transfer Learning pré-treinados no ImageNet (ResNet-18, EfficientNet-B0 e Inception-v3) generalizam para a faixa de 95,33% a 95,78%, demonstrando a superioridade dos extratores profundos pré-treinados frente a variações estruturais de mancais inéditos.
 
 ---
 
@@ -280,16 +291,14 @@ Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero
 
 Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (COT, utilizando a velocidade nominal de rotação como tacômetro virtual) combinado à normalização local por percentil ($1\%-99\%$) e remoção do offset DC por janela, neutraliza-se o efeito da velocidade de rotação (RPM). O impacto é expressivo nas direções de transferência direta (*Zero-Shot*):
 
-| Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Variação Absoluta | Destaque Técnico |
+| Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Variação Absoluta | Análise Técnica |
 |---|:---:|:---:|:---:|:---:|
-| **CWRU $\rightarrow$ Paderborn** | 19.20% | **43.46%** | $+24.26\text{ p.p.}$ | *Recall* de 100% em pista externa (244/244) |
-| **Paderborn $\rightarrow$ CWRU** | 26.23% | **54.75%** | $+28.52\text{ p.p.}$ | *Recall* de 100% em normal e 49% em inner |
-| **CWRU $\rightarrow$ XJTU-SY** | 1.33% | **30.14%** | $+28.81\text{ p.p.}$ | Superou o colapso severo do tempo |
-| **Paderborn $\rightarrow$ XJTU-SY** | 66.67%* | **33.19%** | $+32.77\text{ p.p.}$* | Resgatou a sensibilidade cinemática (antes 0.42%) |
-| **XJTU-SY $\rightarrow$ CWRU** | 20.79% | **14.86%** | $-5.93\text{ p.p.}$ | Run-to-failure vs defeito pontual EDM |
-| **XJTU-SY $\rightarrow$ Paderborn** | 35.20%* | **3.00%** | $-32.20\text{ p.p.}$ | Disparidade extrema de carga (12 kN vs 0.1 Nm) |
-
-*\*Nota: Valores no Tempo para PU/XJTU mascaravam colapso em classe majoritária no Zero-Shot.*
+| **CWRU $\rightarrow$ Paderborn** | 19.20% | **43.46%** | $+24.26\text{ p.p.}$ | *Recall* de 100% em pista externa no Paderborn (244/244) |
+| **Paderborn $\rightarrow$ CWRU** | 26.23% | **54.75%** | $+28.52\text{ p.p.}$ | *Recall* de 100% em normal e 49% em pista interna |
+| **CWRU $\rightarrow$ XJTU-SY** | 1.33% | **30.14%** | $+28.81\text{ p.p.}$ | Superou o colapso espectral severo do tempo (1.33%) |
+| **Paderborn $\rightarrow$ XJTU-SY** | 66.67% | **33.19%** | $-33.48\text{ p.p.}$ | No tempo, 66.67% decorre de recall 0% em inner (ambos falham em inner) |
+| **XJTU-SY $\rightarrow$ CWRU** | 20.79% | **14.86%** | $-5.93\text{ p.p.}$ | Falha terminal de 12 kN vs. defeito usinado EDM em bancada leve |
+| **XJTU-SY $\rightarrow$ Paderborn** | 35.20% | **3.00%** | $-32.20\text{ p.p.}$ | Disparidade extrema de regime dinâmico (12 kN vs. 0.1 Nm) |
 
 <p align="center">
   <img src="docs/images/order_tracking_cross_domain_comparison.png" width="700" alt="Comparativo Cross-Domain Order-CWT vs CWT">
@@ -297,33 +306,34 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 > [!NOTE]
 > **Comportamento Físico e Disparidade Operacional:**  
-> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a mais de 2.100 RPM** em estágio terminal de fratura (*run-to-failure*), enquanto o Paderborn opera a 900 RPM com danos controlados de bancada. Essa diferença severa de regime energético desloca a fronteira de decisão no *Zero-Shot* e fundamenta a necessidade de calibração por *Few-Shot Learning*.
+> O COT compensa estritamente a **velocidade angular ($f / f_r$)**, garantindo que as ordens de falha se alinhem na mesma coordenada vertical. No entanto, o dataset XJTU-SY opera sob **carga radial extrema de 11 kN a 12 kN a mais de 2.100 RPM** em estágio terminal de fratura (*run-to-failure*), enquanto o Paderborn opera a 1.500 RPM com danos controlados de bancada. Essa diferença severa de regime energético desloca a fronteira de decisão no *Zero-Shot* e fundamenta a necessidade de calibração por *Few-Shot Learning*.
 
 ---
 
 ## Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)
 
-Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe extraídas do conjunto de teste (mantendo o Query Set estritamente isolado sem vazamento de dados), a ResNet-18 calibra suas fronteiras de decisão em apenas 5 épocas:
+Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, avaliou-se a estratégia de **Few-Shot Domain Adaptation** comparando a CWT Tradicional (Tempo-Frequência) com a Order-CWT (Ângulo-Ordem). No protocolo experimental, as $K$ amostras de suporte ($K=1$ a $K=5$ por classe) são sorteadas deterministicamente do conjunto de teste da máquina-alvo para calibração rápida (5 épocas), avaliando-se o restante do teste com exclusão estrita dos índices de suporte (configurando calibração na própria máquina-alvo, onde suporte e consulta provêm das mesmas condições e gravações):
 
-| Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Variação ($K=0 \rightarrow K=5$) | Destaque Técnico |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **CWRU $\rightarrow$ Paderborn** | 43.46% | 50.62% | **95.27%** | $+51.81\text{ p.p.}$ | Supera o tempo em +16.1 pp em fadiga real |
-| **Paderborn $\rightarrow$ CWRU** | 54.75% | 27.06% | **78.81%** | $+24.06\text{ p.p.}$ | Adaptação sólida de fadiga para EDM |
-| **CWRU $\rightarrow$ XJTU-SY** | 30.14% | 99.58% | **100.00%** | $+69.86\text{ p.p.}$ | Atinge 99.6% com 1 amostra e 100% com 5 |
-| **XJTU-SY $\rightarrow$ CWRU** | 14.86% | 56.29% | **92.40%** | $+77.54\text{ p.p.}$ | Supera transição de 12 kN para motor |
-| **Paderborn $\rightarrow$ XJTU-SY** | 33.19% | 59.27% | **94.04%** | $+60.85\text{ p.p.}$ | Alinhamento cinemático pleno |
-| **XJTU-SY $\rightarrow$ Paderborn** | 3.00% | 53.49% | **91.10%** | $+88.10\text{ p.p.}$ | De 3% para >91% com 5 amostras |
-| **MÉDIA TRIPARTITE** | **29.90%** | **57.72%** | **91.94%** | **$+62.04\text{ p.p.}$** | **Viabilidade total na Indústria 4.0** |
-
-<p align="center">
-  <img src="docs/images/one_shot_tripartite_full_comparison.png" width="850" alt="Evolução Few-Shot Tripartite">
-</p>
-<p align="center"><sub>Evolução da acurácia cruzada tripartite em todas as 6 direções sob os regimes Zero-Shot ($K=0$) e One-Shot ($K=1$) na Order-CWT.</sub></p>
+| Origem $\rightarrow$ Destino | Zero-Shot Tempo | Zero-Shot Ordem | One-Shot ($K=1$) Tempo | One-Shot ($K=1$) Ordem | Few-Shot ($K=5$) Tempo | Few-Shot ($K=5$) Ordem | Análise Técnica |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **74,46%** | 50,62% | 79,17% | **95,27%** | **Ordem supera tempo por +16,10 pp em danos industriais acelerados (K=5)** |
+| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **74,49%** | 27,06% | **97,48%** | 78,81% | Ordem vence no Zero-Shot (+28 pp); Tempo memoriza carcaça CWRU no Few-Shot |
+| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 97,09% | **99,58%** | **100,00%** | **100,00%** | Empate em 100% com K=5; Ordem superior em Zero-Shot e One-Shot |
+| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | **74,88%** | 56,29% | **98,37%** | 92,40% | Ambos convergem para >92% no Few-Shot |
+| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **95,53%** | 59,27% | **100,00%** | 94,04% | Tempo memoriza ressonância XJTU (Scratch do zero atinge 100%) |
+| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **68,01%** | 53,49% | **93,33%** | 91,10% | Ambos convergem para >91% no Few-Shot |
+| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **80,74%** | 57,72% | **94,73%** | **91,94%** | **Alta eficácia em poucas amostras nas duas representações** |
 
 <p align="center">
   <img src="docs/images/few_shot_k1_k5_time_vs_order_comparison.png" width="850" alt="Confronto Direto K=1 e K=5 Tempo vs Ordem">
 </p>
-<p align="center"><sub>Confronto direto entre CWT Tradicional (Tempo-Frequência) e Order-CWT (Ângulo-Ordem) nos regimes One-Shot (K=1) e Few-Shot (K=5): destaque para CWRU $\rightarrow$ Paderborn em K=5, onde o Order-CWT alcança 95.27% contra 79.17% do tempo (+16.10 pp a favor da Ordem na detecção de falha real de fadiga).</sub></p>
+<p align="center"><sub>Confronto direto entre CWT Tradicional (Tempo-Frequência) e Order-CWT (Ângulo-Ordem) nos regimes One-Shot (K=1) e Few-Shot (K=5).</sub></p>
+
+> [!IMPORTANT]
+> **Interpretação Científica dos Resultados de Few-Shot:**  
+> 1. **O Fenômeno do Atalho de Ressonância no Tempo:** Em 5 de 6 pares com $K=1$ e em 4 de 6 pares com $K=5$, o domínio do tempo apresenta acurácias nominais superiores. Conforme comprovado pelo grupo de controle treinado **do zero** (*scratch*, pesos ImageNet sem pré-treino de rolamento), a ResNet atinge $98{,}40\%$ no CWRU e $100{,}00\%$ no XJTU com $K=5$. Isso ocorre porque a CWT em tempo cobre até $20\text{ kHz}$, permitindo à rede memorizar as ressonâncias estruturais da carcaça da máquina-alvo em poucas iterações.
+> 2. **A Superioridade da Ordem no Dano Real de Paderborn:** Na transição mais exigente da literatura mecânica — migrar de falhas artificiais EDM (**CWRU**) para **danos industriais acelerados** (**Paderborn**, com pitting por fadiga em KI14 e indentação plástica mecânica em KA15) —, o domínio do tempo estagna em $79{,}17\%$, enquanto a **Order-CWT atinge $95{,}27\%$ ($+16{,}10\text{ pp}$ a favor da Ordem)**. Como a Order-CWT atua estritamente na banda cinemática ($0{,}5$ a $20$ ordens), ela ignora ressonâncias de carcaça e aprende a assinatura periódica do impacto dos corpos rolantes nas pistas.
+> 3. **Sensibilidade Amostral no One-Shot ($K=1$):** Com uma única imagem por classe e cabeças lineares recém-inicializadas para números diferentes de classes (Paderborn 3 classes $\rightarrow$ CWRU 4 classes), ocorre sobreajuste ao suporte unitário ($27{,}06\%$), efeito rapidamente superado com $K=5$ ($78{,}81\%$).
 
 ---
 
@@ -340,9 +350,9 @@ Em conformidade com as boas práticas de reprodutibilidade e transparência cien
 2. **Reamostragem Angular em Regime Estacionário vs. Tacômetro Dinâmico:**
    - Como os ensaios públicos operam sob rotação nominal constante por arquivo e não disponibilizam pulsos ópticos de *keyphasor* uniformizados nas três bancadas, o módulo `src/order_tracking.py` realiza a reamostragem angular assumindo velocidade instantânea constante igual à nominal do arquivo ($f_r = \text{RPM}/60$). Em máquinas sujeitas a rampas severas de partida/parada (*run-up/coast-down*), recomenda-se acoplar a integração da fase instantânea via tacômetro físico ou estimação *tacho-less* de fase.
 3. **Filtragem Anti-Aliasing e Demodulação de Envelope antes da Order-CWT:**
-   - Em taxas de amostragem muito elevadas e baixa rotação (como no Paderborn a $64\text{ kHz}$ e $900\text{ RPM}$, onde 4 voltas abrangem $\sim 17.067$ pontos reduzidos para $4.096$ amostras angulares), a interpolação direta pode sofrer dobramento espectral (*aliasing*) de ressonâncias estruturais de alta frequência (> $7.68\text{ kHz}$). Além disso, como os defeitos de rolamento frequentemente modulam em amplitude bandas de ressonância de alta frequência, a aplicação de um filtro passa-baixas anti-aliasing ou a extração prévia do **envelope de Hilbert** seguida da Order-CWT (*Order-Envelope CWT*) constitui uma evolução promissora para elevar a transferência *zero-shot*.
-4. **Amostragem Aleatória e Múltiplas Sementes no *Few-Shot*:**
-   - Para garantir determinismo estrito, a seleção das $K$ amostras de suporte nos notebooks utiliza os primeiros $K$ arquivos ordenados da partição `train/`. Em extensões futuras, recomenda-se reportar a média e o desvio-padrão sobre múltiplas sementes aleatórias de suporte (*episodic evaluation*).
+   - Em taxas de amostragem elevadas (como no Paderborn a $64\text{ kHz}$ e $1.500\text{ RPM}$, onde 4 voltas abrangem $10.240$ pontos reamostrados para $4.096$ amostras angulares), a interpolação direta pode sofrer dobramento espectral (*aliasing*) de ressonâncias de alta frequência. A aplicação de um filtro passa-baixas anti-aliasing ou a extração prévia do **envelope de Hilbert** seguida da Order-CWT (*Order-Envelope CWT*) constitui uma evolução promissora para ampliar o ganho *zero-shot*.
+4. **Protocolo de Calibração vs. Generalização em Rolamentos Inéditos:**
+   - No Few-Shot implementado, as $K$ amostras de suporte são sorteadas deterministicamente do conjunto de teste da máquina-alvo (calibração na própria máquina em operação, compartilhando gravações entre suporte e consulta). Para cenários onde o suporte provém de arquivos de treino completamente desacoplados, recomenda-se avaliar a amostragem em nível de arquivo físico com partição episódica estrita.
 
 ---
 
@@ -528,13 +538,13 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 
 - [x] Fundamentação teórica de sinais não estacionários (CWT vs. STFT vs. FFT)
 - [x] Pipeline de pré-processamento e geração de escalogramas 2D com particionamento estrito sem *Data Leakage*
-- [x] Desenvolvimento da arquitetura própria `BearingCNN` (**95.69%** CWRU, **99.91%** Paderborn, **100.00%** XJTU-SY)
-- [x] Benchmark de *Transfer Learning* com ResNet-18, EfficientNet-B0 e Inception-v3 (**99.87%** CWRU)
-- [x] Diagnóstico binário de integridade com **100.00%** de precisão e recall (zero falsos alarmes e zero falsos negativos)
-- [x] Integração de bancos de dados com falhas reais de vida acelerada (Paderborn University e XJTU-SY)
-- [x] Estudo experimental e caracterização da barreira de *Domain Shift* em avaliação cruzada zero-shot
+- [x] Desenvolvimento da arquitetura própria `BearingCNN` (**97.44%** CWRU, **100.00%** Paderborn, **71.78%** XJTU-SY sob *Leave-Bearing-Out*)
+- [x] Benchmark de *Transfer Learning* com ResNet-18, EfficientNet-B0 e Inception-v3 (até **99.97%** no CWRU, **100.00%** no Paderborn e **95.78%** no XJTU-SY)
+- [x] Diagnóstico binário de integridade com **100.00%** de precisão e recall (zero falsos alarmes e zero falsos negativos no CWRU e Paderborn)
+- [x] Integração de bancos de dados com danos industriais acelerados (Paderborn University e XJTU-SY)
+- [x] Estudo experimental e caracterização da barreira física de *Domain Shift* em avaliação cruzada zero-shot
 - [x] Implementação de *Computed Order Tracking* (COT) e Transformada Wavelet em Ângulo-Ordem (Order-CWT)
-- [x] Metodologia de *Few-Shot Domain Adaptation* demonstrando recuperação da acurácia (até **100.00%** e média de **91.94%**) com calibração rápida ($K=1$ a $K=5$)
+- [x] Metodologia de *Few-Shot Domain Adaptation* com análise comparativa Tempo vs. Ordem (médias de **91.94%** na Ordem e **94.73%** no Tempo, com superioridade de +16,10 pp da Ordem em Paderborn)
 - [x] Documentação técnica completa e sincronização do repositório acadêmico
 
 ---
