@@ -150,7 +150,7 @@ Ao testar a transferência direta de um modelo treinado em um banco de dados par
 
 ## 6. Adaptação de Domínio com Poucos Dados (Few-Shot Domain Adaptation)
 
-Para resolver o gap remanescente de carregamento mecânico e ruído de bancada, implementou-se o protocolo **Few-Shot Domain Adaptation** ($K$ amostras de suporte rotuladas por classe):
+Para resolver o gap remanescente de carregamento mecânico e ruído de bancada, implementou-se o protocolo **Few-Shot Domain Adaptation** sob particionamento temporal estrito com buffer de segurança (suporte na primeira metade temporal, intervalo de 10% descartado e consulta nos últimos 40%, eliminando o vazamento por sobreposição de 50% entre janelas contíguas):
 
 ### 6.1 Matriz Tripartite Completa de Adaptação
 
