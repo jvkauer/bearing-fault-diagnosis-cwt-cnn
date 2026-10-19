@@ -312,28 +312,29 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 ## Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)
 
-Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, avaliou-se a estratégia de **Few-Shot Domain Adaptation** comparando a CWT Tradicional (Tempo-Frequência) com a Order-CWT (Ângulo-Ordem). No protocolo experimental com blindagem temporal, as $K$ amostras de suporte ($K=1$ a $K=5$ por classe) são sorteadas deterministicamente na primeira metade temporal de cada classe do teste da máquina-alvo para calibração rápida (5 épocas), e a consulta é avaliada nos últimos 40%, com um intervalo (*deadzone*) de 10% no meio para eliminar matematicamente qualquer sobreposição de 50% ou correlação contígua entre janelas (configurando o cenário realista de calibração nos dados iniciais de operação da máquina e monitoramento nas horas subsequentes):
+Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, avaliou-se a estratégia de **Few-Shot Domain Adaptation** comparando a CWT Tradicional (Tempo-Frequência) com a Order-CWT (Ângulo-Ordem). No protocolo experimental com blindagem temporal, as $K$ amostras de suporte ($K=1$ a $K=5$ por classe) são sorteadas exclusivamente na primeira metade temporal de cada classe do teste da máquina-alvo para calibração rápida (5 épocas), e a consulta é avaliada nos últimos 40%, com um intervalo (*deadzone*) de 10% no meio para eliminar matematicamente qualquer sobreposição ou correlação residual entre janelas. Todos os resultados refletem a média e o desvio-padrão obtidos em **10 sementes aleatórias independentes**:
 
 | Origem $\rightarrow$ Destino | Zero-Shot Tempo | Zero-Shot Ordem | One-Shot ($K=1$) Tempo | One-Shot ($K=1$) Ordem | Few-Shot ($K=5$) Tempo | Few-Shot ($K=5$) Ordem | Análise Técnica |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **66,67%** | 63,61% | **96,67%** | 92,86% | Ambos superam 92% na transição mais exigente (EDM $\rightarrow$ Fadiga Real) |
-| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **64,72%** | 24,83% | 68,78% | **70,41%** | **Ordem supera o Tempo em $K=5$ (+1,63 pp)**; Zero-Shot Ordem muito superior (+28 pp) |
-| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 88,33% | **100,00%** | 98,33% | **100,00%** | **Ordem crava 100% já no One-Shot ($K=1$)! (+11,67 pp a favor da Ordem)** |
-| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | 59,21% | **60,90%** | 69,42% | **73,84%** | **Ordem supera o Tempo tanto no $K=1$ (+1,69 pp) quanto no $K=5$ (+4,42 pp)** |
-| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **91,11%** | 62,50% | **96,67%** | 68,06% | Tempo explora ressonâncias estruturais da carcaça; Ordem foca na cinemática |
-| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **70,00%** | 44,22% | **98,67%** | 76,87% | Adaptação sólida de 10 kN para regime de torque de bancada |
-| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **73,34%** | 59,34% | **88,09%** | **80,34%** | **Alta eficácia em poucas amostras nas duas representações (>80%)** |
+| **CWRU $\rightarrow$ Paderborn** | 33,33% | **43,46%** | **65,73% ± 9,21%** | 62,38% ± 12,90% | 87,87% ± 9,10% | **93,81% ± 4,78%** | **Ordem supera o Tempo em +5,94 pp com desvio cortado pela metade** |
+| **Paderborn $\rightarrow$ CWRU** | 50,84% | **54,75%** | **60,80% ± 9,86%** | 51,12% ± 15,21% | 70,47% ± 6,65% | **71,37% ± 6,43%** | **Ordem supera o Tempo em $K=5$ (+0,90 pp)**; Zero-Shot Ordem superior (+3,91 pp) |
+| **CWRU $\rightarrow$ XJTU-SY** | **33,33%** | 30,14% | 89,22% ± 8,40% | **98,65% ± 2,65%** | 95,56% ± 3,27% | **99,93% ± 0,21%** | **Ordem atinge 98,65% no One-Shot e 99,93% perfeito no Few-Shot ($K=5$)** |
+| **XJTU-SY $\rightarrow$ CWRU** | **40,54%** | 14,86% | 63,26% ± 11,43% | **64,21% ± 5,58%** | 69,47% ± 6,43% | **72,34% ± 5,89%** | **Ordem supera o Tempo tanto no $K=1$ (+0,95 pp) quanto no $K=5$ (+2,87 pp)** |
+| **Paderborn $\rightarrow$ XJTU-SY** | 33,19% | 33,19% | **94,06% ± 1,55%** | 41,94% ± 7,09% | **98,50% ± 1,63%** | 86,35% ± 6,22% | Tempo explora ressonâncias estruturais da carcaça; Ordem foca na cinemática |
+| **XJTU-SY $\rightarrow$ Paderborn** | **33,33%** | 3,00% | **72,87% ± 6,90%** | 38,67% ± 8,15% | **94,13% ± 2,98%** | 83,74% ± 6,60% | Adaptação sólida de 10 kN para regime de torque de bancada |
+| **MÉDIA TRIPARTITE** | **37,43%** | 29,90% | **74,32% ± 7,89%** | 59,50% ± 8,60% | **86,00% ± 5,01%** | **84,59% ± 5,02%** | **Ambos os domínios atingem 85% de média geral com apenas 5 exemplos ($K=5$)** |
 
 <p align="center">
   <img src="docs/images/few_shot_k1_k5_time_vs_order_comparison.png" width="850" alt="Confronto Direto K=1 e K=5 Tempo vs Ordem">
 </p>
-<p align="center"><sub>Confronto direto entre CWT Tradicional (Tempo-Frequência) e Order-CWT (Ângulo-Ordem) nos regimes One-Shot (K=1) e Few-Shot (K=5).</sub></p>
+<p align="center"><sub>Confronto direto entre CWT Tradicional (Tempo-Frequência) e Order-CWT (Ângulo-Ordem) nos regimes One-Shot (K=1) e Few-Shot (K=5) com média e desvio-padrão de 10 sementes independentes.</sub></p>
 
 > [!IMPORTANT]
-> **Interpretação Científica dos Resultados de Few-Shot:**  
-> 1. **Confronto Direto e Vitórias da Ordem ($K=5$):** No regime determinístico sob partição temporal estrita, a Order-CWT supera a CWT em tempo em **Paderborn $\rightarrow$ CWRU (70,41% vs 68,78%)**, em **CWRU $\rightarrow$ XJTU-SY (100,00% vs 98,33%)** e em **XJTU-SY $\rightarrow$ CWRU (73,84% vs 69,42%)**, além de cravar **100,00% já no One-Shot ($K=1$)** em CWRU $\rightarrow$ XJTU-SY (+11,67 pp a favor da Ordem). Na transição CWRU $\rightarrow$ Paderborn (EDM $\rightarrow$ danos reais), ambas as representações convergem para patamares de excelência (>92%).
-> 2. **Superioridade Estatística Multi-Semente (5 Repetições):** Ao avaliar a média e desvio sobre 5 sementes com $K=5$, a **Order-CWT supera o Tempo na média geral tripartite (85,12% vs. 84,61%)**, com vitória expressiva em **CWRU $\rightarrow$ Paderborn**, onde a Ordem atinge **93,20% ± 5,85%** contra **82,80% ± 10,24%** do tempo (+10,40 pp a favor da Ordem e com muito menor desvio).
-> 3. **Sensibilidade Amostral no One-Shot ($K=1$):** Com uma única imagem por classe e cabeças lineares recém-inicializadas para números diferentes de classes (Paderborn 3 classes $\rightarrow$ CWRU 4 classes), ocorre sobreajuste ao suporte unitário ($24{,}83\%$), efeito rapidamente superado com $K=5$ ($70{,}41\%$).
+> **Interpretação Científica dos Resultados de Few-Shot (10 Sementes):**  
+> 1. **Vitória da Ordem na Mudança Crítica de Velocidade (CWRU $\rightarrow$ Paderborn):** Na transferência entre 1.772 RPM e 1.500 RPM com rolamentos e defeitos distintos, a Order-CWT supera o Tempo em **+5,94 pp (93,81% vs. 87,87%)**, cortando a variabilidade pela metade (**4,78% vs. 9,10%**).
+> 2. **Precisão Quase Perfeita em CWRU $\rightarrow$ XJTU-SY:** A Order-CWT atinge **98,65% ± 2,65% no One-Shot ($K=1$)** e consolida **99,93% ± 0,21% no Few-Shot ($K=5$)**, superando o domínio do tempo em ambos os regimes (+9,42 pp e +4,38 pp).
+> 3. **Consistência em 4 das 6 Direções Cruzadas:** No regime $K=5$, a representação em ordens supera o tempo em 4 dos 6 cenários de transferência (CWRU $\rightarrow$ Paderborn, Paderborn $\rightarrow$ CWRU, CWRU $\rightarrow$ XJTU-SY e XJTU-SY $\rightarrow$ CWRU).
+> 4. **Convergência das Médias Globais:** Ambas as abordagens convergem para o mesmo patamar de excelência industrial (~85% a 86%) com apenas 5 amostras rotuladas por classe, demonstrando a viabilidade de rápida calibração operacional.
 
 ---
 
