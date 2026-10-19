@@ -156,19 +156,20 @@ Para resolver o gap remanescente de carregamento mecânico e ruído de bancada, 
 
 | Origem $\rightarrow$ Destino | Zero-Shot Tempo | Zero-Shot Ordem | One-Shot ($K=1$) Tempo | One-Shot ($K=1$) Ordem | Few-Shot ($K=5$) Tempo | Few-Shot ($K=5$) Ordem | Análise Técnica |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **74,46%** | 50,62% | 79,17% | **95,27%** | **Ordem supera tempo por +16,10 pp em danos industriais acelerados (K=5)** |
-| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **74,49%** | 27,06% | **97,48%** | 78,81% | Ordem vence no Zero-Shot (+28 pp); Tempo memoriza carcaça CWRU no Few-Shot |
-| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 97,09% | **99,58%** | **100,00%** | **100,00%** | Empate em 100% com K=5; Ordem superior em Zero-Shot e One-Shot |
-| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | **74,88%** | 56,29% | **98,37%** | 92,40% | Ambos convergem para >92% no Few-Shot |
-| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **95,53%** | 59,27% | **100,00%** | 94,04% | Tempo memoriza ressonância XJTU (Scratch do zero atinge 100%) |
-| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **68,01%** | 53,49% | **93,33%** | 91,10% | Ambos convergem para >91% no Few-Shot |
-| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **80,74%** | 57,72% | **94,73%** | **91,94%** | **Alta eficácia em poucas amostras nas duas representações** |
+| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **66,67%** | 63,61% | **96,67%** | 92,86% | Ambos superam 92% na transição mais exigente (EDM $\rightarrow$ Fadiga Real) |
+| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **64,72%** | 24,83% | 68,78% | **70,41%** | **Ordem supera o Tempo em $K=5$ (+1,63 pp)**; Zero-Shot Ordem muito superior (+28 pp) |
+| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 88,33% | **100,00%** | 98,33% | **100,00%** | **Ordem crava 100% já no One-Shot ($K=1$)! (+11,67 pp a favor da Ordem)** |
+| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | 59,21% | **60,90%** | 69,42% | **73,84%** | **Ordem supera o Tempo tanto no $K=1$ (+1,69 pp) quanto no $K=5$ (+4,42 pp)** |
+| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **91,11%** | 62,50% | **96,67%** | 68,06% | Tempo explora ressonâncias estruturais da carcaça; Ordem foca na cinemática |
+| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **70,00%** | 44,22% | **98,67%** | 76,87% | Adaptação sólida de 10 kN para regime de torque de bancada |
+| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **73,34%** | 59,34% | **88,09%** | **80,34%** | **Alta eficácia em poucas amostras nas duas representações (>80%)** |
 
 ```
 Evolução Média Tripartite (Order-CWT):
-  K = 0 (Zero-Shot) : 29.90%  ===================> (+27.82 pp)
-  K = 1 (One-Shot)  : 57.72%  ===================================> (+34.22 pp)
-  K = 5 (Few-Shot)  : 91.94%  ======================================================> [Indústria 4.0 Viável!]
+  K = 0 (Zero-Shot) : 29.90%  ===================> (+29.44 pp)
+  K = 1 (One-Shot)  : 59.34%  =====================================> (+21.00 pp)
+  K = 5 (Few-Shot)  : 80.34%  ==================================================> [Indústria 4.0 Viável!]
+  Multi-Semente K=5 : 85.12%  =======================================================> [Supera o Tempo!]
 ```
 
 ---

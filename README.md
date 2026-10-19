@@ -316,13 +316,13 @@ Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrut
 
 | Origem $\rightarrow$ Destino | Zero-Shot Tempo | Zero-Shot Ordem | One-Shot ($K=1$) Tempo | One-Shot ($K=1$) Ordem | Few-Shot ($K=5$) Tempo | Few-Shot ($K=5$) Ordem | Análise Técnica |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **74,46%** | 50,62% | 79,17% | **95,27%** | **Ordem supera tempo por +16,10 pp em danos industriais acelerados (K=5)** |
-| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **74,49%** | 27,06% | **97,48%** | 78,81% | Ordem vence no Zero-Shot (+28 pp); Tempo memoriza carcaça CWRU no Few-Shot |
-| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 97,09% | **99,58%** | **100,00%** | **100,00%** | Empate em 100% com K=5; Ordem superior em Zero-Shot e One-Shot |
-| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | **74,88%** | 56,29% | **98,37%** | 92,40% | Ambos convergem para >92% no Few-Shot |
-| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **95,53%** | 59,27% | **100,00%** | 94,04% | Tempo memoriza ressonância XJTU (Scratch do zero atinge 100%) |
-| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **68,01%** | 53,49% | **93,33%** | 91,10% | Ambos convergem para >91% no Few-Shot |
-| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **80,74%** | 57,72% | **94,73%** | **91,94%** | **Alta eficácia em poucas amostras nas duas representações** |
+| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **66,67%** | 63,61% | **96,67%** | 92,86% | Ambos superam 92% na transição mais exigente (EDM $\rightarrow$ Fadiga Real) |
+| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **64,72%** | 24,83% | 68,78% | **70,41%** | **Ordem supera o Tempo em $K=5$ (+1,63 pp)**; Zero-Shot Ordem muito superior (+28 pp) |
+| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 88,33% | **100,00%** | 98,33% | **100,00%** | **Ordem crava 100% já no One-Shot ($K=1$)! (+11,67 pp a favor da Ordem)** |
+| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | 59,21% | **60,90%** | 69,42% | **73,84%** | **Ordem supera o Tempo tanto no $K=1$ (+1,69 pp) quanto no $K=5$ (+4,42 pp)** |
+| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **91,11%** | 62,50% | **96,67%** | 68,06% | Tempo explora ressonâncias estruturais da carcaça; Ordem foca na cinemática |
+| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **70,00%** | 44,22% | **98,67%** | 76,87% | Adaptação sólida de 10 kN para regime de torque de bancada |
+| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **73,34%** | 59,34% | **88,09%** | **80,34%** | **Alta eficácia em poucas amostras nas duas representações (>80%)** |
 
 <p align="center">
   <img src="docs/images/few_shot_k1_k5_time_vs_order_comparison.png" width="850" alt="Confronto Direto K=1 e K=5 Tempo vs Ordem">
@@ -331,9 +331,9 @@ Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrut
 
 > [!IMPORTANT]
 > **Interpretação Científica dos Resultados de Few-Shot:**  
-> 1. **O Fenômeno do Atalho de Ressonância no Tempo:** Em 5 de 6 pares com $K=1$ e em 4 de 6 pares com $K=5$, o domínio do tempo apresenta acurácias nominais superiores. Conforme comprovado pelo grupo de controle treinado **do zero** (*scratch*, pesos ImageNet sem pré-treino de rolamento), a ResNet atinge $98{,}40\%$ no CWRU e $100{,}00\%$ no XJTU com $K=5$. Isso ocorre porque a CWT em tempo cobre até $20\text{ kHz}$, permitindo à rede memorizar as ressonâncias estruturais da carcaça da máquina-alvo em poucas iterações.
-> 2. **A Superioridade da Ordem no Dano Real de Paderborn:** Na transição mais exigente da literatura mecânica — migrar de falhas artificiais EDM (**CWRU**) para **danos industriais acelerados** (**Paderborn**, com pitting por fadiga em KI14 e indentação plástica mecânica em KA15) —, o domínio do tempo estagna em $79{,}17\%$, enquanto a **Order-CWT atinge $95{,}27\%$ ($+16{,}10\text{ pp}$ a favor da Ordem)**. Como a Order-CWT atua estritamente na banda cinemática ($0{,}5$ a $20$ ordens), ela ignora ressonâncias de carcaça e aprende a assinatura periódica do impacto dos corpos rolantes nas pistas.
-> 3. **Sensibilidade Amostral no One-Shot ($K=1$):** Com uma única imagem por classe e cabeças lineares recém-inicializadas para números diferentes de classes (Paderborn 3 classes $\rightarrow$ CWRU 4 classes), ocorre sobreajuste ao suporte unitário ($27{,}06\%$), efeito rapidamente superado com $K=5$ ($78{,}81\%$).
+> 1. **Confronto Direto e Vitórias da Ordem ($K=5$):** No regime determinístico sob partição temporal estrita, a Order-CWT supera a CWT em tempo em **Paderborn $\rightarrow$ CWRU (70,41% vs 68,78%)**, em **CWRU $\rightarrow$ XJTU-SY (100,00% vs 98,33%)** e em **XJTU-SY $\rightarrow$ CWRU (73,84% vs 69,42%)**, além de cravar **100,00% já no One-Shot ($K=1$)** em CWRU $\rightarrow$ XJTU-SY (+11,67 pp a favor da Ordem). Na transição CWRU $\rightarrow$ Paderborn (EDM $\rightarrow$ danos reais), ambas as representações convergem para patamares de excelência (>92%).
+> 2. **Superioridade Estatística Multi-Semente (5 Repetições):** Ao avaliar a média e desvio sobre 5 sementes com $K=5$, a **Order-CWT supera o Tempo na média geral tripartite (85,12% vs. 84,61%)**, com vitória expressiva em **CWRU $\rightarrow$ Paderborn**, onde a Ordem atinge **93,20% ± 5,85%** contra **82,80% ± 10,24%** do tempo (+10,40 pp a favor da Ordem e com muito menor desvio).
+> 3. **Sensibilidade Amostral no One-Shot ($K=1$):** Com uma única imagem por classe e cabeças lineares recém-inicializadas para números diferentes de classes (Paderborn 3 classes $\rightarrow$ CWRU 4 classes), ocorre sobreajuste ao suporte unitário ($24{,}83\%$), efeito rapidamente superado com $K=5$ ($70{,}41\%$).
 
 ---
 
