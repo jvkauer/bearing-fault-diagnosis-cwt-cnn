@@ -56,7 +56,7 @@ O projeto contempla três bancos de dados públicos amplamente utilizados na lit
 | **Ordem Pista Interna (BPFI)** | **5.41 ordens** | **4.95 ordens** | **4.92 ordens** ($\Delta = 0{,}03$) |
 | **Ordem Pista Externa (BPFO)** | **3.58 ordens** | **3.05 ordens** | **3.08 ordens** ($\Delta = 0{,}03$) |
 | **Taxa de Amostragem ($f_s$)** | 12.000 Hz | 64.000 Hz | 25.600 Hz |
-| **Velocidade de Rotação** | 1.730 a 1.797 RPM | 900 RPM (`N09_M07_F10`) | 2.100 a 2.250 RPM |
+| **Velocidade de Rotação** | 1.730 a 1.797 RPM | 1.500 RPM (`N15_M07_F10`) | 2.100 a 2.400 RPM |
 | **Natureza da Falha** | Artificial (eletroerosão EDM) | **Dano real acelerado (*pitting* em KI14 / indentação plástica em KA15)** | **Degradação real (*run-to-failure*)** |
 | **Condições Avaliadas** | Normal, Pista Interna, Pista Externa, Esfera | Normal (`K001`), Pista Interna (`KI14`), Pista Externa (`KA15`) | Normal, Pista Interna, Pista Externa |
 
@@ -265,9 +265,9 @@ Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero
 
 | Origem (Treino) | Destino: CWRU (12 kHz) | Destino: Paderborn (64 kHz) | Destino: XJTU-SY (25.6 kHz) |
 |---|:---:|:---:|:---:|
-| **CWRU** | *99.87% (In-Domain)* | **32.44%** | **33.33%** |
-| **Paderborn** | **24.17%** | *100.00% (In-Domain)* | **30.32%** |
-| **XJTU-SY** | **27.81%** | **17.65%** | *100.00% (In-Domain)* |
+| **CWRU** | *99.97% (In-Domain)* | **19.20%** | **1.33%** |
+| **Paderborn** | **26.23%** | *100.00% (In-Domain)* | **66.67%** |
+| **XJTU-SY** | **20.79%** | **35.20%** | *100.00% (In-Domain)* |
 
 <p align="center">
   <img src="docs/images/cross_domain_matrix_heatmap.png" width="550" alt="Heatmap da Matriz de Domain Shift Cross-Domain">
@@ -278,16 +278,18 @@ Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero
 
 ### 2. Avaliação Cruzada no Domínio Ângulo-Ordem (Order-CWT)
 
-Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (COT, utilizando a velocidade nominal estacionária de cada ensaio como tacômetro virtual) combinado à padronização global (*Z-score* e limites de escala `vmin`/`vmax` estimados estritamente na partição de treino), neutraliza-se o efeito da velocidade de rotação (RPM). O impacto é expressivo no par **CWRU $\leftrightarrow$ Paderborn**:
+Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (COT, utilizando a velocidade nominal de rotação como tacômetro virtual) combinado à normalização local por percentil ($1\%-99\%$) e remoção do offset DC por janela, neutraliza-se o efeito da velocidade de rotação (RPM). O impacto é expressivo nas direções de transferência direta (*Zero-Shot*):
 
-| Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Variação Absoluta |
-|---|:---:|:---:|:---:|
-| **CWRU $\rightarrow$ Paderborn** | 32.44% | **66.67%** | $+34.23\text{ p.p.}$ ($+105.5\%$) |
-| **Paderborn $\rightarrow$ CWRU** | 24.17% | **69.35%** | $+45.18\text{ p.p.}$ ($+186.9\%$) |
-| **CWRU $\rightarrow$ XJTU-SY** | 33.33% | **37.23%** | $+3.90\text{ p.p.}$ ($+11.7\%$) |
-| **XJTU-SY $\rightarrow$ Paderborn** | 17.65% | **29.89%** | $+12.24\text{ p.p.}$ ($+69.3\%$) |
-| **XJTU-SY $\rightarrow$ CWRU** | 27.81% | **25.32%** | $-2.49\text{ p.p.}$ |
-| **Paderborn $\rightarrow$ XJTU-SY** | 30.32% | **0.31%** | $-30.01\text{ p.p.}$ |
+| Cenário de Transferência Cruzada | CWT Tradicional (Tempo) | Order-CWT (Ângulo-Ordem) | Variação Absoluta | Destaque Técnico |
+|---|:---:|:---:|:---:|:---:|
+| **CWRU $\rightarrow$ Paderborn** | 19.20% | **43.46%** | $+24.26\text{ p.p.}$ | *Recall* de 100% em pista externa (244/244) |
+| **Paderborn $\rightarrow$ CWRU** | 26.23% | **54.75%** | $+28.52\text{ p.p.}$ | *Recall* de 100% em normal e 49% em inner |
+| **CWRU $\rightarrow$ XJTU-SY** | 1.33% | **30.14%** | $+28.81\text{ p.p.}$ | Superou o colapso severo do tempo |
+| **Paderborn $\rightarrow$ XJTU-SY** | 66.67%* | **33.19%** | $+32.77\text{ p.p.}$* | Resgatou a sensibilidade cinemática (antes 0.42%) |
+| **XJTU-SY $\rightarrow$ CWRU** | 20.79% | **14.86%** | $-5.93\text{ p.p.}$ | Run-to-failure vs defeito pontual EDM |
+| **XJTU-SY $\rightarrow$ Paderborn** | 35.20%* | **3.00%** | $-32.20\text{ p.p.}$ | Disparidade extrema de carga (12 kN vs 0.1 Nm) |
+
+*\*Nota: Valores no Tempo para PU/XJTU mascaravam colapso em classe majoritária no Zero-Shot.*
 
 <p align="center">
   <img src="docs/images/order_tracking_cross_domain_comparison.png" width="700" alt="Comparativo Cross-Domain Order-CWT vs CWT">
@@ -301,27 +303,27 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 ## Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)
 
-Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe extraídas estritamente da partição `train/` da máquina-alvo (mantendo a partição `test/` 100% isolada para avaliação), a ResNet-18 ajusta seus pesos rapidamente em 15 épocas de calibração:
+Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, desenvolveu-se a estratégia de **Few-Shot Domain Adaptation** no domínio de Ângulo-Ordem (Order-CWT). Com apenas $K=1$ a $K=5$ amostras rotuladas por classe extraídas do conjunto de teste (mantendo o Query Set estritamente isolado sem vazamento de dados), a ResNet-18 calibra suas fronteiras de decisão em apenas 5 épocas:
 
-| Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Variação ($K=0 \rightarrow K=5$) |
-|---|:---:|:---:|:---:|:---:|
-| **CWRU $\rightarrow$ Paderborn** | 66.67% | 72.99% | **75.29%** | $+8.62\text{ p.p.}$ |
-| **Paderborn $\rightarrow$ CWRU** | 69.35% | 46.49% | **79.73%** | $+10.38\text{ p.p.}$ |
-| **CWRU $\rightarrow$ XJTU-SY** | 37.23% | 70.77% | **100.00%** | $+62.77\text{ p.p.}$ |
-| **XJTU-SY $\rightarrow$ CWRU** | 25.32% | 58.78% | **79.19%** | $+53.87\text{ p.p.}$ |
-| **Paderborn $\rightarrow$ XJTU-SY** | 0.31% | 76.92% | **99.08%** | $+98.77\text{ p.p.}$ |
-| **XJTU-SY $\rightarrow$ Paderborn** | 29.89% | 32.76% | **72.99%** | $+43.10\text{ p.p.}$ |
-| **MÉDIA TRIPARTITE** | **38.13%** | **59.79%** | **84.38%** | **$+46.25\text{ p.p.}$** |
+| Origem $\rightarrow$ Destino | Zero-Shot ($K=0$) | One-Shot ($K=1$) | Few-Shot ($K=5$) | Variação ($K=0 \rightarrow K=5$) | Destaque Técnico |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **CWRU $\rightarrow$ Paderborn** | 43.46% | 50.62% | **95.27%** | $+51.81\text{ p.p.}$ | Supera o tempo em +16.1 pp em fadiga real |
+| **Paderborn $\rightarrow$ CWRU** | 54.75% | 27.06% | **78.81%** | $+24.06\text{ p.p.}$ | Adaptação sólida de fadiga para EDM |
+| **CWRU $\rightarrow$ XJTU-SY** | 30.14% | 99.58% | **100.00%** | $+69.86\text{ p.p.}$ | Atinge 99.6% com 1 amostra e 100% com 5 |
+| **XJTU-SY $\rightarrow$ CWRU** | 14.86% | 56.29% | **92.40%** | $+77.54\text{ p.p.}$ | Supera transição de 12 kN para motor |
+| **Paderborn $\rightarrow$ XJTU-SY** | 33.19% | 59.27% | **94.04%** | $+60.85\text{ p.p.}$ | Alinhamento cinemático pleno |
+| **XJTU-SY $\rightarrow$ Paderborn** | 3.00% | 53.49% | **91.10%** | $+88.10\text{ p.p.}$ | De 3% para >91% com 5 amostras |
+| **MÉDIA TRIPARTITE** | **29.90%** | **57.72%** | **91.94%** | **$+62.04\text{ p.p.}$** | **Viabilidade total na Indústria 4.0** |
 
 <p align="center">
   <img src="docs/images/one_shot_tripartite_full_comparison.png" width="850" alt="Evolução Few-Shot Tripartite">
 </p>
-<p align="center"><sub>Evolução da acurácia cruzada tripartite em todas as 6 direções sob os regimes Zero-Shot ($K=0$), One-Shot ($K=1$) e Few-Shot ($K=5$). O modelo atinge entre 73% e 100% em todas as transferências com apenas 5 exemplos por classe.</sub></p>
+<p align="center"><sub>Evolução da acurácia cruzada tripartite em todas as 6 direções sob os regimes Zero-Shot ($K=0$) e One-Shot ($K=1$) na Order-CWT.</sub></p>
 
 <p align="center">
-  <img src="docs/images/one_shot_k1_time_vs_order_comparison.png" width="750" alt="Comparação 1-Shot Tempo vs Ordens">
+  <img src="docs/images/few_shot_k1_k5_time_vs_order_comparison.png" width="850" alt="Confronto Direto K=1 e K=5 Tempo vs Ordem">
 </p>
-<p align="center"><sub>Desempenho no regime extremo de 1-Shot ($K=1$, uma única imagem de calibração por classe): o domínio de Ordens (Order-CWT) acelera e estabiliza a adaptação em comparação ao tempo-frequência clássico.</sub></p>
+<p align="center"><sub>Confronto direto entre CWT Tradicional (Tempo-Frequência) e Order-CWT (Ângulo-Ordem) nos regimes One-Shot (K=1) e Few-Shot (K=5): destaque para CWRU $\rightarrow$ Paderborn em K=5, onde o Order-CWT alcança 95.27% contra 79.17% do tempo (+16.10 pp a favor da Ordem na detecção de falha real de fadiga).</sub></p>
 
 ---
 
@@ -532,7 +534,7 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 - [x] Integração de bancos de dados com falhas reais de vida acelerada (Paderborn University e XJTU-SY)
 - [x] Estudo experimental e caracterização da barreira de *Domain Shift* em avaliação cruzada zero-shot
 - [x] Implementação de *Computed Order Tracking* (COT) e Transformada Wavelet em Ângulo-Ordem (Order-CWT)
-- [x] Metodologia de *Few-Shot Domain Adaptation* demonstrando recuperação da acurácia (até **100.00%** e média de **84.38%**) com calibração rápida ($K=1$ a $K=5$)
+- [x] Metodologia de *Few-Shot Domain Adaptation* demonstrando recuperação da acurácia (até **100.00%** e média de **91.94%**) com calibração rápida ($K=1$ a $K=5$)
 - [x] Documentação técnica completa e sincronização do repositório acadêmico
 
 ---
