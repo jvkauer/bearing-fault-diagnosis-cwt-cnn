@@ -366,27 +366,29 @@ bearing-fault-diagnosis-cwt-cnn/
 │   ├── xjtu/                       # Dataset XJTU-SY bruto (.csv) e processado
 │   └── order_tracking/             # Escalogramas reamostrados em Ângulo-Ordem (Order-CWT)
 ├── notebooks/
-│   ├── 1_cwru/                     # Módulo 1: Pipeline CWRU e Análise de Desempenho
+│   ├── 1_cwru/                     # Módulo 1: Pipeline CWRU (Intra-domínio) e Análise de Desempenho
 │   │   ├── 01_cwru_exploracao_cwt.ipynb
 │   │   ├── 02_cwru_treinamento_cnn.ipynb
 │   │   ├── 03_cwru_transfer_learning.ipynb
 │   │   └── 04_cwru_analise_desempenho.ipynb
-│   ├── 2_paderborn/                # Módulo 2: Pipeline Paderborn (64 kHz)
+│   ├── 2_paderborn/                # Módulo 2: Pipeline Paderborn University (Intra-domínio, 64 kHz)
 │   │   ├── 01_paderborn_exploracao_cwt.ipynb
 │   │   ├── 02_paderborn_treinamento_cnn.ipynb
 │   │   └── 03_paderborn_transfer_learning.ipynb
-│   ├── 3_cross_domain/             # Módulo 3: Avaliação Cruzada no Tempo
+│   ├── 3_xjtu/                     # Módulo 3: Pipeline XJTU-SY (Intra-domínio, Run-to-Failure)
+│   │   ├── 01_xjtu_exploracao_cwt.ipynb
+│   │   ├── 02_xjtu_treinamento_cnn.ipynb
+│   │   └── 03_xjtu_transfer_learning.ipynb
+│   ├── 4_cross_domain_tempo/       # Módulo 4: Avaliação Cruzada no Domínio do Tempo (Hz)
 │   │   ├── 01_avaliacao_cruzada_tempo.ipynb
-│   │   └── 02_few_shot_tempo_freq.ipynb
-│   ├── 4_order_tracking/           # Módulo 4: Computed Order Tracking e Invariância
+│   │   └── 02_few_shot_tempo.ipynb
+│   ├── 5_order_tracking/           # Módulo 5: Computed Order Tracking e Domínio de Ordens
 │   │   ├── 01_exploracao_angulo_ordem.ipynb
 │   │   ├── 02_geracao_e_treinamento_order_cwt.ipynb
 │   │   ├── 03_avaliacao_cruzada_order.ipynb
-│   │   └── 04_few_shot_domain_adaptation.ipynb
-│   └── 5_xjtu/                     # Módulo 5: Pipeline XJTU-SY (Run-to-Failure)
-│       ├── 01_xjtu_exploracao_cwt.ipynb
-│       ├── 02_xjtu_treinamento_cnn.ipynb
-│       └── 03_xjtu_transfer_learning.ipynb
+│   │   └── 04_few_shot_order.ipynb
+│   └── 6_confronto_final/          # Módulo 6: Confronto Científico Final e Validação Multi-Seed
+│       └── 01_confronto_tempo_vs_ordem.ipynb
 ├── src/
 │   ├── config.py                   # Parâmetros globais, diretórios, geometrias e frequências
 │   ├── cwt_processor.py            # Cálculo da CWT e exportação de escalogramas 224x224
