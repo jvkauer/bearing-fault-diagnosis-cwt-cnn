@@ -251,19 +251,28 @@ Resultados obtidos em amostras de teste utilizando **particionamento estrito bas
 
 ## Desempenho Computacional e Viabilidade em Tempo Real
 
-Para avaliar a viabilidade prática em sistemas industriais de monitoramento contínuo (*Condition Monitoring*) e computação de borda (*Edge AI*), mensurou-se o custo computacional teórico (GFLOPs), a pegada de memória (MB) e a latência empírica de inferência unitária (`batch_size = 1`, precedida de *warm-up* e sincronização CUDA) em um ambiente equipado com GPU **NVIDIA GeForce RTX 2060 SUPER (8 GB)** e CPU **AMD Ryzen 5 2600 Six-Core (3,40 GHz)**. O tempo médio de geração do escalograma CWT por janela de 1.024 amostras foi de **$64.06 \pm 5.96\text{ ms}$** na CPU.
+Para avaliar a viabilidade prática em sistemas industriais de monitoramento contínuo (*Condition Monitoring*) e computação de borda (*Edge AI*), mensurou-se o custo computacional teórico (GFLOPs), a pegada de memória (MB) e a latência empírica de inferência unitária (`batch_size = 1`, precedida de 50 iterações de *warm-up* e sincronização explícita com `torch.cuda.synchronize()`) em um ambiente equipado com GPU **NVIDIA GeForce RTX 2060 SUPER (8 GB)** e CPU **AMD Ryzen 5 2600 Six-Core (3,40 GHz)**. O tempo médio de geração do escalograma CWT por janela de 1.024 amostras foi mensurado em **$49{,}47 \pm 4{,}01\text{ ms}$** na CPU (frente a uma duração física de $85{,}33\text{ ms}$ por janela amostrada a 12 kHz no CWRU).
 
-| Arquitetura | Parâmetros (M) | Tamanho (MB) | GFLOPs | Inferência CPU (ms) | Inferência GPU (ms) | Pipeline Total CPU (ms) | Pipeline Total GPU (ms) |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **BearingCNN (Autoral)** | **0.52** | **1.99** | **0.556** | **19.60 ± 1.66** | **2.22 ± 0.14** | **83.66** | **66.28** |
-| **ResNet-18** | 11.18 | 42.68 | 3.636 | 42.34 ± 4.02 | 5.17 ± 1.38 | 106.40 | 69.23 |
-| **EfficientNet-B0** | 4.01 | 15.60 | 0.799 | 50.37 ± 4.49 | 12.64 ± 3.92 | 114.43 | 76.70 |
-| **Inception-v3** | 21.79 | 83.48 | 11.459 | 137.04 ± 9.79 | 21.48 ± 4.62 | 201.10 | 85.54 |
+| Arquitetura | Parâmetros (M) | Tamanho (MB) | GFLOPs | Treino (s/época) | Inferência GPU (ms) | Inferência CPU (ms) | Pipeline Total CPU (ms) | Acurácia CWRU (%) |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **BearingCNN (Autoral)** | **0,52** | **1,99** | **1,474** | **11,26 s** | **1,68 ± 0,24** | **18,92 ± 2,53** | **68,39** | 97,44% |
+| **ResNet-18** | 11,18 | 42,68 | 3,627 | 15,28 s | 7,11 ± 2,80 | 40,74 ± 9,36 | 90,20 | **99,97%** |
+| **EfficientNet-B0** | 4,01 | 15,60 | **0,769** | 23,06 s | 17,86 ± 4,47 | 37,74 ± 8,80 | 87,21 | 97,96% |
+| **Inception-v3** | 21,79 | 83,48 | 11,422 | 70,66 s | 23,67 ± 1,51 | 139,09 ± 19,46 | 188,56 | 99,25% |
+
+> [!TIP]
+> **Viabilidade Fim a Fim em Tempo Real na CPU:**  
+> A duração física de uma janela de 1.024 amostras a 12 kHz é de $\Delta t = 1.024 / 12.000 \approx 85{,}33\text{ ms}$. Como o pipeline total da **BearingCNN** na CPU demanda apenas **$68{,}39\text{ ms}$** ($49{,}47\text{ ms}$ de CWT + $18{,}92\text{ ms}$ de inferência convolucional), o sistema é capaz de operar em **tempo real contínuo estritamente na CPU**, sem necessidade de acelerador gráfico dedicado (GPU) para inferência na borda da fábrica.
 
 <p align="center">
   <img src="docs/images/desempenho_computacional_comparacao.png" width="850" alt="Comparativo de Desempenho Computacional">
 </p>
 <p align="center"><sub>Análise comparativa das quatro arquiteturas investigadas: (a) parâmetros vs. acurácia no CWRU, (b) tempo de inferência isolada da CNN (CPU vs. GPU) e (c) latência total do pipeline fim a fim (geração CWT + inferência) frente ao orçamento de tempo real de 85.33 ms por janela a 12 kHz.</sub></p>
+
+<p align="center">
+  <img src="docs/images/desempenho_tradeoff_acuracia_latencia.png" width="800" alt="Trade-off Acurácia vs Latência">
+</p>
+<p align="center"><sub>Fronteira de Pareto e trade-off entre acurácia de teste no CWRU e latência de inferência (em GPU e CPU). O diâmetro dos marcadores reflete o volume de parâmetros de cada modelo.</sub></p>
 
 ---
 
@@ -312,29 +321,59 @@ Ao reamostrar os sinais para o domínio angular via *Computed Order Tracking* (C
 
 ## Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)
 
-Para suprimir os efeitos combinados de carga, ruído de fundo e geometria estrutural com mínimo esforço de rotulagem na fábrica, avaliou-se a estratégia de **Few-Shot Domain Adaptation** comparando a CWT Tradicional (Tempo-Frequência) com a Order-CWT (Ângulo-Ordem). No protocolo experimental com blindagem temporal, as $K$ amostras de suporte ($K=1$ a $K=5$ por classe) são sorteadas exclusivamente na primeira metade temporal de cada classe do teste da máquina-alvo para calibração rápida (5 épocas), e a consulta é avaliada nos últimos 40%, com um intervalo (*deadzone*) de 10% no meio para eliminar matematicamente qualquer sobreposição ou correlação residual entre janelas. Todos os resultados refletem a média e o desvio-padrão obtidos em **10 sementes aleatórias independentes**:
+Para mitigar a severa barreira física de *Domain Shift* causada por discrepâncias operacionais (rotação, carga dinâmica, geometria do mancal e ruído estrutural) com o mínimo esforço de rotulagem na linha de produção, avaliou-se uma estratégia sistemática de **Few-Shot Domain Adaptation** comparando a CWT Tradicional (Tempo-Frequência) e a Order-CWT (Ângulo-Ordem).
+
+O protocolo experimental adota **blindagem temporal estrita** para eliminar matematicamente qualquer vazamento de dados por sobreposição de janelas (*stride leakage*): as $K$ amostras de suporte ($K=1$ a $K=5$ por classe) são sorteadas exclusivamente na primeira metade temporal (primeiros 50%) de cada classe do teste da máquina-alvo para calibração rápida (5 épocas de ajuste fino), e o conjunto de consulta é avaliado estritamente nos últimos 40%, com um intervalo de descarte de 10% (*safety deadzone*) entre suporte e consulta. Para assegurar robustez estatística frente à seleção aleatória das amostras de calibração, todos os experimentos foram executados com **10 sementes pseudoaleatórias independentes** em **todas as 4 arquiteturas convolucionais** nas **6 direções de transferência possíveis**.
+
+### 1. Confronto Geral das 4 Arquiteturas (Média Global dos 6 Pares Cruzados)
+
+A tabela abaixo sintetiza o desempenho médio consolidado sobre os 6 pares de transferência cruzada (CWRU $\leftrightarrow$ Paderborn, CWRU $\leftrightarrow$ XJTU-SY, Paderborn $\leftrightarrow$ XJTU-SY) com média e desvio-padrão de 10 sementes independentes:
+
+| Arquitetura | Parâmetros | Zero-Shot Tempo | Zero-Shot Ordem | One-Shot ($K=1$) Tempo | One-Shot ($K=1$) Ordem | Few-Shot ($K=5$) Tempo | Few-Shot ($K=5$) Ordem | Destaque Operacional |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **ResNet-18** | 11,18 M | 28,24% | 29,90% | 74,32% ± 7,89% | 59,50% ± 8,60% | **86,00% ± 5,01%** | **84,59% ± 5,02%** | **Líder absoluto em precisão.** Ordem atinge 93,81% em CWRU $\to$ PU e 99,93% em CWRU $\to$ XJTU |
+| **EfficientNet-B0** | 4,01 M | 40,32% | 33,66% | 65,94% ± 8,44% | 50,17% ± 5,48% | 84,11% ± 3,17% | 74,32% ± 4,85% | **Maior estabilidade amostral** (menor desvio padrão global: apenas 3,17% no Tempo) |
+| **Inception-v3** | 21,79 M | 43,35% | 23,84% | 70,26% ± 6,93% | 53,46% ± 7,85% | 84,06% ± 4,69% | 78,66% ± 5,05% | **Ordem supera o Tempo nas transferências reversas** (+7,44 pp em PU $\to$ CWRU e +2,39 pp em XJTU $\to$ CWRU) |
+| **BearingCNN (Própria)** | **0,52 M** | 35,97% | 38,34% | 56,73% ± 10,91% | 42,06% ± 10,41% | 66,58% ± 7,41% | 57,38% ± 6,94% | **Salto formidável:** sobe de 34,72% para **91,81% ± 4,14%** em CWRU $\to$ XJTU ($K=5$ Ordem, +21,92 pp sobre Tempo) |
+
+<p align="center">
+  <img src="docs/images/few_shot_4models_time_vs_order.png" width="850" alt="Confronto Few-Shot das 4 Arquiteturas: Tempo vs Ordem">
+</p>
+<p align="center"><sub>Confronto comparativo das 4 arquiteturas convolucionais em One-Shot (K=1) e Few-Shot (K=5) nos domínios do Tempo e de Ordens (média dos 6 pares e 10 sementes independentes).</sub></p>
+
+### 2. Desempenho Detalhado por Par de Transferência (Modelo de Referência: ResNet-18)
+
+O modelo de referência ResNet-18 atingiu a maior eficácia global de generalização com poucas amostras. A tabela abaixo detalha cada um dos 6 pares de bancadas sob $K=0$ (Zero-Shot), $K=1$ (One-Shot) e $K=5$ (Few-Shot) com 10 sementes:
 
 | Origem $\rightarrow$ Destino | Zero-Shot Tempo | Zero-Shot Ordem | One-Shot ($K=1$) Tempo | One-Shot ($K=1$) Ordem | Few-Shot ($K=5$) Tempo | Few-Shot ($K=5$) Ordem | Análise Técnica |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **CWRU $\rightarrow$ Paderborn** | 33,33% | **43,46%** | **65,73% ± 9,21%** | 62,38% ± 12,90% | 87,87% ± 9,10% | **93,81% ± 4,78%** | **Ordem supera o Tempo em +5,94 pp com desvio cortado pela metade** |
-| **Paderborn $\rightarrow$ CWRU** | 50,84% | **54,75%** | **60,80% ± 9,86%** | 51,12% ± 15,21% | 70,47% ± 6,65% | **71,37% ± 6,43%** | **Ordem supera o Tempo em $K=5$ (+0,90 pp)**; Zero-Shot Ordem superior (+3,91 pp) |
-| **CWRU $\rightarrow$ XJTU-SY** | **33,33%** | 30,14% | 89,22% ± 8,40% | **98,65% ± 2,65%** | 95,56% ± 3,27% | **99,93% ± 0,21%** | **Ordem atinge 98,65% no One-Shot e 99,93% perfeito no Few-Shot ($K=5$)** |
-| **XJTU-SY $\rightarrow$ CWRU** | **40,54%** | 14,86% | 63,26% ± 11,43% | **64,21% ± 5,58%** | 69,47% ± 6,43% | **72,34% ± 5,89%** | **Ordem supera o Tempo tanto no $K=1$ (+0,95 pp) quanto no $K=5$ (+2,87 pp)** |
-| **Paderborn $\rightarrow$ XJTU-SY** | 33,19% | 33,19% | **94,06% ± 1,55%** | 41,94% ± 7,09% | **98,50% ± 1,63%** | 86,35% ± 6,22% | Tempo explora ressonâncias estruturais da carcaça; Ordem foca na cinemática |
-| **XJTU-SY $\rightarrow$ Paderborn** | **33,33%** | 3,00% | **72,87% ± 6,90%** | 38,67% ± 8,15% | **94,13% ± 2,98%** | 83,74% ± 6,60% | Adaptação sólida de 10 kN para regime de torque de bancada |
-| **MÉDIA TRIPARTITE** | **37,43%** | 29,90% | **74,32% ± 7,89%** | 59,50% ± 8,60% | **86,00% ± 5,01%** | **84,59% ± 5,02%** | **Ambos os domínios atingem 85% de média geral com apenas 5 exemplos ($K=5$)** |
+| **CWRU $\rightarrow$ Paderborn** | 19,20% | **43,46%** | **65,73% ± 9,21%** | 62,38% ± 12,90% | 87,87% ± 9,10% | **93,81% ± 4,78%** | **Ordem supera o Tempo em +5,94 pp com variabilidade cortada pela metade** |
+| **Paderborn $\rightarrow$ CWRU** | 26,23% | **54,75%** | **60,80% ± 9,86%** | 51,12% ± 15,21% | 70,47% ± 6,65% | **71,37% ± 6,43%** | **Ordem supera o Tempo em $K=5$ (+0,90 pp)**; Zero-Shot Ordem superior (+28,52 pp) |
+| **CWRU $\rightarrow$ XJTU-SY** | 1,33% | **30,14%** | 89,22% ± 8,40% | **98,65% ± 2,65%** | 95,56% ± 3,27% | **99,93% ± 0,21%** | **Ordem atinge 98,65% no One-Shot e 99,93% praticamente perfeito no Few-Shot ($K=5$)** |
+| **XJTU-SY $\rightarrow$ CWRU** | **20,79%** | 14,86% | 63,26% ± 11,43% | **64,21% ± 5,58%** | 69,47% ± 6,43% | **72,34% ± 5,89%** | **Ordem supera o Tempo tanto no $K=1$ (+0,95 pp) quanto no $K=5$ (+2,87 pp)** |
+| **Paderborn $\rightarrow$ XJTU-SY** | **66,67%** | 33,19% | **94,06% ± 1,55%** | 41,94% ± 7,09% | **98,50% ± 1,63%** | 86,35% ± 6,22% | No tempo, o modelo explora harmônicos estruturais coincidentes; Ordem foca na cinemática |
+| **XJTU-SY $\rightarrow$ Paderborn** | **35,20%** | 3,00% | **72,87% ± 6,90%** | 38,67% ± 8,15% | **94,13% ± 2,98%** | 83,74% ± 6,60% | Adaptação sólida do regime severo de 10 kN para regime de torque de bancada |
+| **MÉDIA TRIPARTITE** | 28,24% | **29,90%** | **74,32% ± 7,89%** | 59,50% ± 8,60% | **86,00% ± 5,01%** | **84,59% ± 5,02%** | **Ambos os domínios convergem para ~85% de média com apenas 5 exemplos ($K=5$)** |
 
 <p align="center">
   <img src="docs/images/few_shot_k1_k5_time_vs_order_comparison.png" width="850" alt="Confronto Direto K=1 e K=5 Tempo vs Ordem">
 </p>
-<p align="center"><sub>Confronto direto entre CWT Tradicional (Tempo-Frequência) e Order-CWT (Ângulo-Ordem) nos regimes One-Shot (K=1) e Few-Shot (K=5) com média e desvio-padrão de 10 sementes independentes.</sub></p>
+<p align="center"><sub>Confronto direto entre CWT Tradicional (Tempo-Frequência) e Order-CWT (Ângulo-Ordem) nos regimes One-Shot (K=1) e Few-Shot (K=5) com média e desvio-padrão de 10 sementes independentes na ResNet-18.</sub></p>
+
+### 3. Principais Descobertas Científicas do Benchmark Multi-Arquitetura
 
 > [!IMPORTANT]
-> **Interpretação Científica dos Resultados de Few-Shot (10 Sementes):**  
-> 1. **Vitória da Ordem na Mudança Crítica de Velocidade (CWRU $\rightarrow$ Paderborn):** Na transferência entre 1.772 RPM e 1.500 RPM com rolamentos e defeitos distintos, a Order-CWT supera o Tempo em **+5,94 pp (93,81% vs. 87,87%)**, cortando a variabilidade pela metade (**4,78% vs. 9,10%**).
-> 2. **Precisão Quase Perfeita em CWRU $\rightarrow$ XJTU-SY:** A Order-CWT atinge **98,65% ± 2,65% no One-Shot ($K=1$)** e consolida **99,93% ± 0,21% no Few-Shot ($K=5$)**, superando o domínio do tempo em ambos os regimes (+9,42 pp e +4,38 pp).
-> 3. **Consistência em 4 das 6 Direções Cruzadas:** No regime $K=5$, a representação em ordens supera o tempo em 4 dos 6 cenários de transferência (CWRU $\rightarrow$ Paderborn, Paderborn $\rightarrow$ CWRU, CWRU $\rightarrow$ XJTU-SY e XJTU-SY $\rightarrow$ CWRU).
-> 4. **Convergência das Médias Globais:** Ambas as abordagens convergem para o mesmo patamar de excelência industrial (~85% a 86%) com apenas 5 amostras rotuladas por classe, demonstrando a viabilidade de rápida calibração operacional.
+> **Interpretação Científica dos Resultados de Few-Shot (10 Sementes, 4 Modelos):**  
+> 1. **Poder Superior dos Modelos Pré-Treinados (*Transfer Learning*):**  
+>    As três redes profundas pré-treinadas no ImageNet (ResNet-18, EfficientNet-B0 e Inception-v3) alcançam patamares médios de **84% a 86%** com apenas 5 amostras ($K=5$). Seus extratores genéricos de bordas e texturas fornecem representações semânticas robustas que aceleram a adaptação a novos domínios físicos.
+> 2. **Salto da BearingCNN no Domínio de Ordens:**  
+>    A BearingCNN (0,52 M parâmetros, treinada do zero sem qualquer pré-treino externo) atinge uma evolução notável: no par CWRU $\rightarrow$ XJTU-SY, a acurácia sobe de **34,72% (Zero-Shot)** para **91,81% ± 4,14% ($K=5$ Ordem)**, superando o domínio do tempo em **+21,92 pp**. Isso comprova que a invariância angular compensa a menor capacidade paramétrica da arquitetura compacta.
+> 3. **Vitória da Ordem na Mudança Crítica de Velocidade (CWRU $\rightarrow$ Paderborn):**  
+>    Na transição direta entre 1.772 RPM e 1.500 RPM com rolamentos e tipos de defeitos distintos, a Order-CWT supera o Tempo em **+5,94 pp (93,81% vs. 87,87%)** na ResNet-18, reduzindo a dispersão estatística pela metade (**4,78% vs. 9,10%**).
+> 4. **Estabilidade Amostral da EfficientNet-B0:**  
+>    A EfficientNet-B0 apresentou o menor desvio-padrão global entre todas as arquiteturas (**± 3,17%** no domínio do tempo), evidenciando alta estabilidade frente à aleatoriedade das amostras selecionadas para suporte.
+> 5. **Robustez do Inception-v3 nas Transferências Reversas:**  
+>    Graças aos filtros convolucionais multiescala em paralelo, o Inception-v3 sob Order-CWT supera o domínio do tempo nas direções reversas (Paderborn $\rightarrow$ CWRU com **+7,44 pp** e XJTU-SY $\rightarrow$ CWRU com **+2,39 pp**), mostrando alta capacidade de reconstrução espectral ao transferir de bancadas industriais reais para defeitos usinados em laboratório.
 
 ---
 
@@ -382,12 +421,15 @@ bearing-fault-diagnosis-cwt-cnn/
 │   │   └── 03_xjtu_transfer_learning.ipynb
 │   ├── 4_cross_domain_tempo/       # Módulo 4: Avaliação Cruzada no Domínio do Tempo (Hz)
 │   │   ├── 01_avaliacao_cruzada_tempo.ipynb
-│   │   └── 02_few_shot_tempo.ipynb
+│   │   ├── 02_few_shot_tempo.ipynb
+│   │   └── multiseed_tempo_4models_10seeds.json # Resultados multi-seed tempo (4 modelos)
 │   ├── 5_order_tracking/           # Módulo 5: Computed Order Tracking e Domínio de Ordens
 │   │   ├── 01_exploracao_angulo_ordem.ipynb
 │   │   ├── 02_geracao_e_treinamento_order_cwt.ipynb
 │   │   ├── 03_avaliacao_cruzada_order.ipynb
-│   │   └── 04_few_shot_order.ipynb
+│   │   ├── 04_few_shot_order.ipynb
+│   │   ├── in_domain_order_summary.json         # Métricas intra-domínio order (4 modelos)
+│   │   └── multiseed_order_4models_10seeds.json # Resultados multi-seed order (4 modelos)
 │   └── 6_confronto_final/          # Módulo 6: Confronto Científico Final e Validação Multi-Seed
 │       └── 01_confronto_tempo_vs_ordem.ipynb
 ├── src/
@@ -406,7 +448,8 @@ bearing-fault-diagnosis-cwt-cnn/
 │   ├── benchmark_desempenho.py     # Medição de GFLOPs, parâmetros e latência CPU/GPU
 │   └── visualization.py            # Plotagem de matrizes de confusão, curvas de treino e escalogramas
 ├── results/
-│   └── benchmark_desempenho.csv    # Métricas consolidadas de complexidade e latência
+│   ├── benchmark_desempenho.csv    # Métricas consolidadas de complexidade e latência
+│   └── confronto_few_shot_4arquiteturas.csv # Benchmark multi-arquitetura Few-Shot (10 sementes)
 ├── docs/
 │   └── images/                     # Figuras de alta resolução utilizadas na documentação
 ├── benchmark_hiperparametros.py    # Experimento fatorial de hiperparâmetros e funções de ativação
@@ -547,7 +590,7 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 - [x] Integração de bancos de dados com danos industriais acelerados (Paderborn University e XJTU-SY)
 - [x] Estudo experimental e caracterização da barreira física de *Domain Shift* em avaliação cruzada zero-shot
 - [x] Implementação de *Computed Order Tracking* (COT) e Transformada Wavelet em Ângulo-Ordem (Order-CWT)
-- [x] Metodologia de *Few-Shot Domain Adaptation* com análise comparativa Tempo vs. Ordem (médias de **91.94%** na Ordem e **94.73%** no Tempo, com superioridade de +16,10 pp da Ordem em Paderborn)
+- [x] Metodologia de *Few-Shot Domain Adaptation* multi-arquitetura (4 modelos convolucionais, 10 sementes independentes e blindagem temporal), atingindo até **93,81%** em CWRU $\rightarrow$ Paderborn e **99,93%** em CWRU $\rightarrow$ XJTU-SY
 - [x] Documentação técnica completa e sincronização do repositório acadêmico
 
 ---

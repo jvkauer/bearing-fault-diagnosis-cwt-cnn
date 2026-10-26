@@ -1,0 +1,20 @@
+{
+  "CWRU": {
+    "BearingCNN": 98.25304393859184,
+    "ResNet-18": 100.0,
+    "EfficientNet-B0": 98.14716781365802,
+    "Inception-v3": 99.94706193753309
+  },
+  "Paderborn": {
+    "BearingCNN": 100.0,
+    "ResNet-18": 100.0,
+    "EfficientNet-B0": 100.0,
+    "Inception-v3": 100.0
+  },
+  "XJTU-SY": {
+    "BearingCNN": 96.25,
+    "ResNet-18": 100.0,
+    "EfficientNet-B0": 99.30555555555556,
+    "Inception-v3": 80.41666666666667
+  }
+}

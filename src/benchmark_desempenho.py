@@ -9,16 +9,19 @@ Mede, para cada arquitetura (BearingCNN, ResNet-18, EfficientNet-B0, Inception-v
 
 Mede também o tempo de pré-processamento (geração do escalograma CWT de uma
 janela de 1.024 amostras), permitindo comparar o tempo total de diagnóstico
-com a duração da janela de sinal (~85,3 ms a 12 kHz) e verificar a viabilidade
+com a duração da janela de sinal (~85,33 ms a 12 kHz) e verificar a viabilidade
 de operação em tempo real.
 
-Fornece ainda a função `plot_performance_comparison` para gerar os gráficos
-comparativos de desempenho computacional no padrão da monografia.
+Fornece ainda as funções `plot_performance_comparison` e `plot_tradeoff_single`
+para gerar os gráficos de compromisso (trade-off) entre acurácia, latência,
+parâmetros e GFLOPs no padrão da monografia.
 
 Uso:
     python src/benchmark_desempenho.py
 """
 
+import gc
+import io
 import sys
 import time
 import platform
@@ -27,6 +30,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import torch
 import torch.nn as nn
 from torch.utils.flop_counter import FlopCounterMode
@@ -97,13 +101,16 @@ def measure_latency(model, img_size: int, device: torch.device, runs: int) -> np
 
 
 def measure_epoch_training_time(model_key: str, img_size: int, device: torch.device,
-                                train_batches: int = 222, val_batches: int = 74) -> float:
+                                train_batches: int = 201, val_batches: int = 74) -> float:
     """
     Estima o tempo médio (s) de uma época completa (treino + validação) no CWRU
-    (7.100 imagens de treino = 222 batches; 2.364 de validação = 74 batches, batch_size=32).
+    (6.416 imagens de treino = 201 batches; 2.339 de validação = 74 batches, batch_size=32).
     """
     if device.type != "cuda":
         return float("nan")
+
+    gc.collect()
+    torch.cuda.empty_cache()
 
     if model_key == "bearing_cnn":
         model = BearingCNN(num_classes=NUM_CLASSES).to(device)
@@ -147,7 +154,8 @@ def measure_epoch_training_time(model_key: str, img_size: int, device: torch.dev
     torch.cuda.synchronize()
     step_val_s = (time.perf_counter() - t0) / n_sample_steps
 
-    del model, x, y
+    del model, optimizer, criterion, x, y, out, loss
+    gc.collect()
     torch.cuda.empty_cache()
     return train_batches * step_train_s + val_batches * step_val_s
 
@@ -172,105 +180,259 @@ def load_benchmark_dataframe(csv_path: Path = RESULTS_DIR / "benchmark_desempenh
     return pd.read_csv(csv_path, comment="#")
 
 
-def plot_performance_comparison(df: pd.DataFrame = None, cwt_ms: float = 64.06,
-                                window_ms: float = 85.33, save_path: Path = None):
+def plot_performance_comparison(df: pd.DataFrame = None, cwt_ms: float = 49.47,
+                                window_ms: float = 85.33, save_path: Path = None,
+                                show: bool = True):
     """
-    Gera uma figura com 3 painéis comparando o desempenho computacional das 4 arquiteturas:
-        (a) Latência de Inferência por Amostra (GPU vs. CPU)
-        (b) Viabilidade em Tempo Real na CPU (Pré-processamento CWT + Inferência CNN vs. Janela de 85,3 ms)
-        (c) Tempo de Treinamento por Época vs. Número de Parâmetros e GFLOPs
+    Gera a figura oficial de compromisso (Trade-off) com 2 painéis relacionando Acurácia
+    com Latência de Inferência, Número de Parâmetros (M) e Complexidade Teórica (GFLOPs):
+        (a) Acurácia no Teste CWRU (%) vs. Latência de Inferência em GPU (ms) [Bolha = Parâmetros]
+        (b) Acurácia no Teste CWRU (%) vs. Ciclo Completo em CPU (CWT + CNN em ms) [Bolha = GFLOPs]
     """
     if df is None:
         df = load_benchmark_dataframe()
 
-    modelos = df["modelo"].tolist()
-    x = np.arange(len(modelos))
+    cores = {
+        "BearingCNN": "#1f78b4",      # Azul
+        "ResNet-18": "#2ca02c",       # Verde
+        "EfficientNet-B0": "#ff7f00", # Laranja
+        "Inception-v3": "#6a3d9a",    # Roxo
+    }
 
-    fig, axs = plt.subplots(1, 3, figsize=(18, 5.5))
+    fig, axs = plt.subplots(1, 2, figsize=(15.5, 6.2), sharey=True)
 
-    # -------------------------------------------------------------------------
-    # Painel (a): Latência de Inferência (GPU vs CPU)
-    # -------------------------------------------------------------------------
-    width = 0.36
-    bars_gpu = axs[0].bar(x - width / 2, df["gpu_ms_media"], width, yerr=df["gpu_ms_desvio"],
-                          capsize=4, label="GPU (RTX 2060 SUPER)", color="#2b8cbe", edgecolor="black", alpha=0.9)
-    bars_cpu = axs[0].bar(x + width / 2, df["cpu_ms_media"], width, yerr=df["cpu_ms_desvio"],
-                          capsize=4, label="CPU (Ryzen 5 2600)", color="#e34a33", edgecolor="black", alpha=0.9)
+    # =========================================================================
+    # Painel (a): Acurácia (%) vs. Latência na GPU (ms) | Bolha = Parâmetros (M)
+    # =========================================================================
+    ax_a = axs[0]
 
-    axs[0].set_title("(a) Latência de Inferência por Amostra", fontsize=12, fontweight="bold")
-    axs[0].set_ylabel("Tempo por Amostra (ms)", fontsize=11)
-    axs[0].set_xticks(x)
-    axs[0].set_xticklabels(modelos, rotation=15, ha="right", fontsize=10)
-    axs[0].set_ylim(0, max(df["cpu_ms_media"] + df["cpu_ms_desvio"]) * 1.18)
-    axs[0].grid(axis="y", linestyle="--", alpha=0.5)
-    axs[0].legend(fontsize=9.5, loc="upper left")
+    # Fronteira de Pareto (BearingCNN -> ResNet-18)
+    pareto_df = df[df["modelo"].isin(["BearingCNN", "ResNet-18"])].sort_values("gpu_ms_media")
+    ax_a.plot(
+        pareto_df["gpu_ms_media"], pareto_df["acuracia_cwru"],
+        linestyle="--", linewidth=2.0, color="#2ca02c", alpha=0.80, zorder=2
+    )
 
-    for bar, std in zip(bars_gpu, df["gpu_ms_desvio"]):
-        h = bar.get_height()
-        axs[0].text(bar.get_x() + bar.get_width() / 2, h + std + 2.5, f"{h:.2f}",
-                    ha="center", va="bottom", fontsize=8.5, fontweight="bold", color="#045a8d")
-    for bar, std in zip(bars_cpu, df["cpu_ms_desvio"]):
-        h = bar.get_height()
-        axs[0].text(bar.get_x() + bar.get_width() / 2, h + std + 2.5, f"{h:.1f}",
-                    ha="center", va="bottom", fontsize=8.5, fontweight="bold", color="#b30000")
+    # Posições em pontos (offset points) relativas ao centro de cada bolha
+    label_cfg_a = {
+        "BearingCNN": ((14, -18), "left", "top"),
+        "ResNet-18": ((22, -6), "left", "center"),
+        "EfficientNet-B0": ((-18, -16), "right", "top"),
+        "Inception-v3": ((-26, -6), "right", "center"),
+    }
 
-    # -------------------------------------------------------------------------
-    # Painel (b): Viabilidade em Tempo Real na CPU (CWT + CNN vs Janela 85,3 ms)
-    # -------------------------------------------------------------------------
-    bars_cwt = axs[1].bar(x, [cwt_ms] * len(modelos), width=0.5,
-                          label=f"Extração CWT ({cwt_ms:.1f} ms)", color="#74c476", edgecolor="black", alpha=0.9)
-    bars_cnn = axs[1].bar(x, df["cpu_ms_media"], width=0.5, bottom=[cwt_ms] * len(modelos),
-                          label="Inferência CNN na CPU", color="#fd8d3c", edgecolor="black", alpha=0.9)
-    axs[1].axhline(window_ms, color="#d90000", linestyle="--", linewidth=2.0,
-                   label=f"Limite Tempo Real ({window_ms:.1f} ms)")
+    for _, row in df.iterrows():
+        nome = row["modelo"]
+        cor = cores.get(nome, "#333333")
+        s_bolha = row["parametros_M"] * 42 + 140
 
-    axs[1].set_title("(b) Ciclo Completo em CPU (CWT + CNN)", fontsize=12, fontweight="bold")
-    axs[1].set_ylabel("Tempo Total por Janela (ms)", fontsize=11)
-    axs[1].set_xticks(x)
-    axs[1].set_xticklabels(modelos, rotation=15, ha="right", fontsize=10)
-    axs[1].set_ylim(0, max(df["total_cpu_ms"]) * 1.18)
-    axs[1].grid(axis="y", linestyle="--", alpha=0.5)
-    axs[1].legend(fontsize=9.5, loc="upper left")
+        ax_a.scatter(
+            row["gpu_ms_media"], row["acuracia_cwru"], s=s_bolha,
+            color=cor, alpha=0.92, edgecolors="black", linewidth=1.6, zorder=4
+        )
 
-    for i, total in enumerate(df["total_cpu_ms"]):
-        status_color = "#006d2c" if total <= window_ms else "#b30000"
-        axs[1].text(x[i], total + 3.5, f"{total:.2f} ms",
-                    ha="center", va="bottom", fontsize=9, fontweight="bold", color=status_color)
+        (ox, oy), ha_align, va_align = label_cfg_a.get(nome, ((12, 0), "left", "center"))
+        ax_a.annotate(
+            f"{nome}\n({row['gpu_ms_media']:.2f} ms | {row['acuracia_cwru']:.2f}%)\n[{row['parametros_M']:.2f} M | {row['gflops']:.2f} GFLOPs]",
+            xy=(row["gpu_ms_media"], row["acuracia_cwru"]),
+            xytext=(ox, oy),
+            textcoords="offset points",
+            ha=ha_align, va=va_align,
+            fontsize=8.8, fontweight="bold", color=cor,
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor=cor, alpha=0.94, lw=1.1),
+            arrowprops=dict(arrowstyle="-", color=cor, lw=1.1, shrinkA=0, shrinkB=6),
+            zorder=5
+        )
 
-    # -------------------------------------------------------------------------
-    # Painel (c): Tempo de Treinamento por Época (GPU) e GFLOPs
-    # -------------------------------------------------------------------------
-    bars_train = axs[2].bar(x, df["treino_epoca_s"], width=0.5,
-                            color="#756bb1", edgecolor="black", alpha=0.9,
-                            label="Treino + Validação por Época (GPU)")
-    axs[2].set_title("(c) Tempo de Treinamento por Época (GPU)", fontsize=12, fontweight="bold")
-    axs[2].set_ylabel("Tempo por Época (s)", fontsize=11)
-    axs[2].set_xticks(x)
-    axs[2].set_xticklabels(modelos, rotation=15, ha="right", fontsize=10)
-    axs[2].set_xlim(-0.55, len(modelos) - 0.35)
-    axs[2].set_ylim(0, max(df["treino_epoca_s"]) * 1.24)
-    axs[2].grid(axis="y", linestyle="--", alpha=0.5)
-    axs[2].legend(fontsize=9.5, loc="upper left")
+    ax_a.set_title("(a) Acurácia vs. Latência em GPU (Tamanho ∝ Parâmetros)", fontsize=11.5, fontweight="bold", pad=10)
+    ax_a.set_xlabel("Latência de Inferência em GPU por Amostra (ms)", fontsize=10.8)
+    ax_a.set_ylabel("Acurácia Multiclasse no Teste CWRU (%)", fontsize=10.8)
+    ax_a.set_xlim(-0.5, max(df["gpu_ms_media"]) * 1.18)
+    ax_a.set_ylim(96.3, 100.45)
+    ax_a.grid(True, linestyle="--", alpha=0.5, zorder=1)
 
-    for i, bar in enumerate(bars_train):
-        h = bar.get_height()
-        p_m = df["parametros_M"].iloc[i]
-        gf = df["gflops"].iloc[i]
-        axs[2].text(bar.get_x() + bar.get_width() / 2, h + 1.2,
-                    f"{h:.2f} s\n({p_m:.2f}M | {gf:.2f} GF)",
-                    ha="center", va="bottom", fontsize=8.2, fontweight="bold", color="#3f007d")
+    legend_handles_a = [
+        Line2D([0], [0], marker="o", color="w", label=f"{r['modelo']} ({r['parametros_M']:.2f} M parâm.)",
+               markerfacecolor=cores.get(r["modelo"], "#333"), markeredgecolor="black", markersize=8.5)
+        for _, r in df.iterrows()
+    ]
+    legend_handles_a.append(
+        Line2D([0], [0], linestyle="--", color="#2ca02c", lw=2.0, label="Fronteira de Eficiência (Pareto)")
+    )
+    ax_a.legend(handles=legend_handles_a, title="Arquiteturas (Bolha ∝ Parâmetros)",
+                fontsize=8.8, title_fontsize=9.2, loc="lower right", framealpha=0.96)
 
-    fig.suptitle("Análise Comparativa de Desempenho Computacional no Conjunto CWRU",
-                 fontsize=14, fontweight="bold", y=1.03)
+    # =========================================================================
+    # Painel (b): Acurácia (%) vs. Ciclo Completo CPU (CWT + CNN) | Bolha = GFLOPs
+    # =========================================================================
+    ax_b = axs[1]
+
+    max_x_b = max(df["total_cpu_ms"]) * 1.14
+    ax_b.axvspan(20, window_ms, color="#e5f5e0", alpha=0.55, zorder=0)
+    ax_b.axvspan(window_ms, max_x_b, color="#fee0d2", alpha=0.40, zorder=0)
+    ax_b.axvline(window_ms, color="#cb181d", linestyle="--", linewidth=2.0, zorder=2)
+
+    ax_b.text(
+        window_ms - 2.5, 96.45, f"← Viável em Tempo Real\n    (< {window_ms:.2f} ms)",
+        ha="right", va="bottom", fontsize=8.8, fontweight="bold", color="#006d2c"
+    )
+    ax_b.text(
+        window_ms + 2.5, 96.45, f"Excede a Janela Física →\n(> {window_ms:.2f} ms)",
+        ha="left", va="bottom", fontsize=8.8, fontweight="bold", color="#a50f15"
+    )
+
+    label_cfg_b = {
+        "BearingCNN": ((10, 22), "right", "bottom"),
+        "ResNet-18": ((20, -6), "left", "center"),
+        "EfficientNet-B0": ((18, -10), "left", "top"),
+        "Inception-v3": ((-26, -8), "right", "center"),
+    }
+
+    for _, row in df.iterrows():
+        nome = row["modelo"]
+        cor = cores.get(nome, "#333333")
+        s_bolha_gf = row["gflops"] * 75 + 140
+
+        ax_b.scatter(
+            row["total_cpu_ms"], row["acuracia_cwru"], s=s_bolha_gf,
+            color=cor, alpha=0.92, edgecolors="black", linewidth=1.6, zorder=4
+        )
+
+        (ox, oy), ha_align, va_align = label_cfg_b.get(nome, ((14, 0), "left", "center"))
+        ax_b.annotate(
+            f"{nome}\n({row['total_cpu_ms']:.2f} ms | {row['acuracia_cwru']:.2f}%)\n[{row['gflops']:.2f} GFLOPs | {row['treino_epoca_s']:.1f} s/época]",
+            xy=(row["total_cpu_ms"], row["acuracia_cwru"]),
+            xytext=(ox, oy),
+            textcoords="offset points",
+            ha=ha_align, va=va_align,
+            fontsize=8.6, fontweight="bold", color=cor,
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor=cor, alpha=0.94, lw=1.1),
+            arrowprops=dict(arrowstyle="-", color=cor, lw=1.1, shrinkA=0, shrinkB=6),
+            zorder=5
+        )
+
+    ax_b.set_title(f"(b) Acurácia vs. Ciclo Completo em CPU: CWT ({cwt_ms:.1f} ms) + CNN (Tamanho ∝ GFLOPs)",
+                   fontsize=11.5, fontweight="bold", pad=10)
+    ax_b.set_xlabel("Tempo Total por Janela em CPU: Extração CWT + Inferência CNN (ms)", fontsize=10.8)
+    ax_b.set_xlim(20, max_x_b)
+    ax_b.set_ylim(96.3, 100.45)
+    ax_b.grid(True, linestyle="--", alpha=0.5, zorder=1)
+
+    legend_handles_b = [
+        Line2D([0], [0], marker="o", color="w", label=f"{r['modelo']} ({r['gflops']:.2f} GFLOPs)",
+               markerfacecolor=cores.get(r["modelo"], "#333"), markeredgecolor="black", markersize=8.5)
+        for _, r in df.iterrows()
+    ]
+    legend_handles_b.append(
+        Line2D([0], [0], linestyle="--", color="#cb181d", lw=2.0, label=f"Limite Tempo Real ({window_ms:.2f} ms)")
+    )
+    ax_b.legend(handles=legend_handles_b, title="Complexidade Teórica (Bolha ∝ GFLOPs)",
+                fontsize=8.8, title_fontsize=9.2, loc="lower right", framealpha=0.96)
+
+    fig.suptitle("Análise de Compromisso (Trade-off): Acurácia vs. Custo Computacional no Conjunto CWRU (3.081 Amostras)",
+                 fontsize=13.2, fontweight="bold", y=1.02)
     plt.tight_layout()
 
     if save_path is not None:
         save_path = Path(save_path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
+        save_path.write_bytes(buf.getvalue())
         print(f"[INFO] Figura salva em: {save_path}")
 
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_tradeoff_single(df: pd.DataFrame = None, save_path: Path = None, show: bool = True):
+    """
+    Gera a versão de painel único do gráfico de compromisso (Trade-off):
+    Acurácia no Teste CWRU (%) vs. Latência de Inferência na GPU (ms),
+    com tamanho da bolha proporcional aos parâmetros (M) e GFLOPs anotados.
+    """
+    if df is None:
+        df = load_benchmark_dataframe()
+
+    cores = {
+        "BearingCNN": "#1f78b4",      # Azul
+        "ResNet-18": "#2ca02c",       # Verde
+        "EfficientNet-B0": "#ff7f00", # Laranja
+        "Inception-v3": "#6a3d9a",    # Roxo
+    }
+
+    fig, ax = plt.subplots(figsize=(9.5, 5.6))
+
+    pareto_df = df[df["modelo"].isin(["BearingCNN", "ResNet-18"])].sort_values("gpu_ms_media")
+    ax.plot(
+        pareto_df["gpu_ms_media"], pareto_df["acuracia_cwru"],
+        linestyle="--", linewidth=2.0, color="#2ca02c", alpha=0.80, zorder=2
+    )
+
+    label_cfg = {
+        "BearingCNN": ((14, -16), "left", "top"),
+        "ResNet-18": ((22, -6), "left", "center"),
+        "EfficientNet-B0": ((-18, -16), "right", "top"),
+        "Inception-v3": ((-26, -6), "right", "center"),
+    }
+
+    for _, row in df.iterrows():
+        nome = row["modelo"]
+        cor = cores.get(nome, "#333333")
+        tamanho_bolha = row["parametros_M"] * 45 + 140
+
+        ax.scatter(
+            row["gpu_ms_media"], row["acuracia_cwru"], s=tamanho_bolha,
+            color=cor, alpha=0.92, edgecolors="black", linewidth=1.6, zorder=4
+        )
+        (ox, oy), ha_align, va_align = label_cfg.get(nome, ((12, 0), "left", "center"))
+        ax.annotate(
+            f"{nome}\n({row['gpu_ms_media']:.2f} ms | {row['acuracia_cwru']:.2f}%)\n[{row['parametros_M']:.2f} M | {row['gflops']:.2f} GFLOPs]",
+            xy=(row["gpu_ms_media"], row["acuracia_cwru"]),
+            xytext=(ox, oy),
+            textcoords="offset points",
+            ha=ha_align, va=va_align,
+            fontsize=8.8, fontweight="bold", color=cor,
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor=cor, alpha=0.94, lw=1.1),
+            arrowprops=dict(arrowstyle="-", color=cor, lw=1.1, shrinkA=0, shrinkB=6),
+            zorder=5
+        )
+
+    ax.set_title("Compromisso (Trade-off): Acurácia no Teste CWRU vs. Latência de Inferência em GPU",
+                 fontsize=12, fontweight="bold", pad=10)
+    ax.set_xlabel("Latência de Inferência em GPU por Amostra (ms)", fontsize=11)
+    ax.set_ylabel("Acurácia Multiclasse no Teste CWRU (%)", fontsize=11)
+    ax.set_ylim(96.3, 100.45)
+    ax.set_xlim(-0.5, max(df["gpu_ms_media"]) * 1.18)
+    ax.grid(True, linestyle="--", alpha=0.5, zorder=1)
+
+    legend_handles = [
+        Line2D([0], [0], marker="o", color="w",
+               label=f"{r['modelo']} ({r['parametros_M']:.2f} M parâm. | {r['gflops']:.2f} GFLOPs)",
+               markerfacecolor=cores.get(r["modelo"], "#333"), markeredgecolor="black", markersize=8.5)
+        for _, r in df.iterrows()
+    ]
+    legend_handles.append(
+        Line2D([0], [0], linestyle="--", color="#2ca02c", lw=2.0, label="Fronteira de Eficiência (Pareto)")
+    )
+    ax.legend(handles=legend_handles, title="Tamanho da bolha ∝ Parâmetros",
+              fontsize=8.8, title_fontsize=9.2, loc="lower right", framealpha=0.96)
+    plt.tight_layout()
+
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
+        save_path.write_bytes(buf.getvalue())
+        print(f"[INFO] Gráfico de trade-off salvo em: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 
 def main():
@@ -284,7 +446,7 @@ def main():
     print("=" * 92)
     print(f"GPU: {gpu_name}")
     print(f"CPU: {platform.processor()} | Threads PyTorch: {torch.get_num_threads()}")
-    print(f"PyTorch {torch.__version__} | Duração da janela: {window_ms:.1f} ms\n")
+    print(f"PyTorch {torch.__version__} | Duração da janela: {window_ms:.2f} ms\n")
 
     cwt_t = measure_cwt_time()
     print(f"Geração do escalograma CWT (CPU): {cwt_t.mean():.2f} ± {cwt_t.std():.2f} ms\n")
@@ -296,14 +458,16 @@ def main():
         gflops = count_gflops(model, img_size)
         cpu_t = measure_latency(model, img_size, torch.device("cpu"), RUNS_CPU)
         gpu_t = measure_latency(model, img_size, torch.device("cuda"), RUNS_GPU) if has_gpu else np.array([np.nan])
+        del model
+        gc.collect()
+        if has_gpu:
+            torch.cuda.empty_cache()
+
         epoch_s = measure_epoch_training_time(key, img_size, torch.device("cuda")) if has_gpu else np.nan
 
         rows.append((name, params_m, gflops, epoch_s, epoch_s * 10.0 / 60.0,
                      gpu_t.mean(), gpu_t.std(), cpu_t.mean(), cpu_t.std(), acc_cwru))
         print(f"[OK] {name}")
-        del model
-        if has_gpu:
-            torch.cuda.empty_cache()
 
     header = (f"{'Modelo':<16}|{'Parâm. (M)':>10}|{'GFLOPs':>8}|{'Treino/Época':>13}|"
               f"{'GPU (ms)':>15}|{'CPU (ms)':>16}|{'Total CPU (ms)':>15}")
@@ -320,7 +484,7 @@ def main():
         lines.append(f"{name},{p:.4f},{g:.4f},{ep_s:.2f},{ep_10m:.2f},"
                      f"{gm:.2f},{gs:.2f},{cm:.2f},{cs:.2f},{total:.2f},{acc:.2f}")
 
-    print(f"\nTotal CPU = CWT ({cwt_t.mean():.2f} ms) + inferência em CPU. Janela de sinal = {window_ms:.1f} ms.")
+    print(f"\nTotal CPU = CWT ({cwt_t.mean():.2f} ms) + inferência em CPU. Janela de sinal = {window_ms:.2f} ms.")
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     out = RESULTS_DIR / "benchmark_desempenho.csv"
