@@ -5,7 +5,7 @@ para classificação dos escalogramas CWT (Diagnóstico de Falhas em Rolamentos)
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Optional
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
@@ -43,7 +43,8 @@ def seed_worker(worker_id):
 def get_data_loaders(
     batch_size: int = BATCH_SIZE,
     data_dir: Path = PROCESSED_DATA_DIR,
-    seed: int = RANDOM_SEED
+    seed: int = RANDOM_SEED,
+    custom_transform: Optional[Any] = None
 ) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
     Carrega os datasets de escalogramas CWT salvos em data_dir (train, val, test)
@@ -53,15 +54,19 @@ def get_data_loaders(
         batch_size (int): Tamanho do lote (padrão definido em config.py).
         data_dir (Path): Diretório raiz dos dados processados contendo train/, val/ e test/.
         seed (int): Semente pseudoaleatória para o gerador do DataLoader.
+        custom_transform (Optional[Any]): Transformação personalizada torchvision para os escalogramas.
 
     Returns:
         Tuple contendo (train_loader, val_loader, test_loader, classes).
     """
-    transform = transforms.Compose([
-        transforms.Resize((IMG_HEIGHT, IMG_WIDTH)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    if custom_transform is not None:
+        transform = custom_transform
+    else:
+        transform = transforms.Compose([
+            transforms.Resize((IMG_HEIGHT, IMG_WIDTH)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
     data_dir = Path(data_dir)
     train_dir = data_dir / "train"
@@ -163,7 +168,8 @@ def train_and_evaluate_bearing_cnn(
     lr: float = LEARNING_RATE,
     data_dir: Path = PROCESSED_DATA_DIR,
     checkpoint_name: str = "checkpoint_bearing_cnn_best.pth",
-    seed: int = RANDOM_SEED
+    seed: int = RANDOM_SEED,
+    custom_transform: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     Treina e avalia a arquitetura BearingCNN personalizada com checkpointing
@@ -175,6 +181,7 @@ def train_and_evaluate_bearing_cnn(
         data_dir (Path): Diretório dos dados processados (train, val, test).
         checkpoint_name (str): Nome do arquivo para salvar o checkpoint.
         seed (int): Semente para determinismo total (pesos, DataLoader e otimizador).
+        custom_transform (Optional[Any]): Transformação personalizada para os escalogramas.
 
     Returns:
         Dict contendo: model_name, history (train/val loss e acc),
@@ -182,7 +189,9 @@ def train_and_evaluate_bearing_cnn(
     """
     set_seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader, test_loader, classes = get_data_loaders(BATCH_SIZE, data_dir=data_dir, seed=seed)
+    train_loader, val_loader, test_loader, classes = get_data_loaders(
+        BATCH_SIZE, data_dir=data_dir, seed=seed, custom_transform=custom_transform
+    )
     
     model = BearingCNN(num_classes=len(classes)).to(device)
     criterion = nn.CrossEntropyLoss()

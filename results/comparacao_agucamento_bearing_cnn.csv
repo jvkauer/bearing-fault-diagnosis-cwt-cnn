@@ -1,0 +1,4 @@
+Estratégia,Acurácia Geral (%),Detecção Binária (%),Recall Inner Race (%),F1 Inner Race (%),Recall Outer Race (%),F1 Outer Race (%),Melhor Val Acc (%)
+1. Baseline (Sem Aguçamento),71.78%,99.78%,16.00%,27.43%,100.00%,70.42%,95.00%
+2. Com Unsharp Masking,70.22%,99.78%,11.33%,20.24%,100.00%,69.28%,95.19%
+3. Com Filtro Laplaciano,69.11%,99.78%,8.00%,14.72%,100.00%,68.49%,95.74%

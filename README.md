@@ -430,12 +430,16 @@ bearing-fault-diagnosis-cwt-cnn/
 │   │   ├── 04_few_shot_order.ipynb
 │   │   ├── in_domain_order_summary.json         # Métricas intra-domínio order (4 modelos)
 │   │   └── multiseed_order_4models_10seeds.json # Resultados multi-seed order (4 modelos)
-│   └── 6_confronto_final/          # Módulo 6: Confronto Científico Final e Validação Multi-Seed
-│       └── 01_confronto_tempo_vs_ordem.ipynb
+│   ├── 6_confronto_final/          # Módulo 6: Confronto Científico Final e Validação Multi-Seed
+│   │   └── 01_confronto_tempo_vs_ordem.ipynb
+│   └── 7_filtros_agucamento/       # Módulo 7: Avaliação Experimental de Filtros de Aguçamento (Sharpening)
+│       ├── 01_teste_agucamento_bearing_cnn.ipynb
+│       └── 02_teste_agucamento_cot_bearing_cnn.ipynb
 ├── src/
 │   ├── config.py                   # Parâmetros globais, diretórios, geometrias e frequências
 │   ├── cwt_processor.py            # Cálculo da CWT e exportação de escalogramas 224x224
 │   ├── order_tracking.py           # Algoritmos de Computed Order Tracking (COT) e Order-CWT
+│   ├── sharpening.py               # Filtros de aguçamento espacial 2D (Laplaciano 3x3 e Unsharp Masking 5x5)
 │   ├── dataset_cwru.py             # Parser e janelamento dos arquivos .mat do CWRU
 │   ├── generate_dataset_cwru.py    # Gerador de escalogramas CWRU sem vazamento de dados
 │   ├── dataset_paderborn.py        # Parser e janelamento dos arquivos .mat de Paderborn
@@ -449,7 +453,9 @@ bearing-fault-diagnosis-cwt-cnn/
 │   └── visualization.py            # Plotagem de matrizes de confusão, curvas de treino e escalogramas
 ├── results/
 │   ├── benchmark_desempenho.csv    # Métricas consolidadas de complexidade e latência
-│   └── confronto_few_shot_4arquiteturas.csv # Benchmark multi-arquitetura Few-Shot (10 sementes)
+│   ├── confronto_few_shot_4arquiteturas.csv # Benchmark multi-arquitetura Few-Shot (10 sementes)
+│   ├── comparacao_agucamento_bearing_cnn.csv # Benchmark de aguçamento CWT Tempo
+│   └── comparacao_agucamento_cot_bearing_cnn.csv # Benchmark de aguçamento Order-CWT (COT)
 ├── docs/
 │   └── images/                     # Figuras de alta resolução utilizadas na documentação
 ├── benchmark_hiperparametros.py    # Experimento fatorial de hiperparâmetros e funções de ativação
@@ -591,6 +597,7 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 - [x] Estudo experimental e caracterização da barreira física de *Domain Shift* em avaliação cruzada zero-shot
 - [x] Implementação de *Computed Order Tracking* (COT) e Transformada Wavelet em Ângulo-Ordem (Order-CWT)
 - [x] Metodologia de *Few-Shot Domain Adaptation* multi-arquitetura (4 modelos convolucionais, 10 sementes independentes e blindagem temporal), atingindo até **93,81%** em CWRU $\rightarrow$ Paderborn e **99,93%** em CWRU $\rightarrow$ XJTU-SY
+- [x] Avaliação experimental de filtros de aguçamento espacial (Laplaciano e Unsharp Masking) em escalogramas CWT e Order-CWT
 - [x] Documentação técnica completa e sincronização do repositório acadêmico
 
 ---
