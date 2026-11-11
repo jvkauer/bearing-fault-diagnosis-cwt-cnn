@@ -296,6 +296,3 @@ def train_and_evaluate_bearing_cnn(
         "test_labels": test_labels,
         "classes": classes
     }
-
-
-Net = BearingCNN

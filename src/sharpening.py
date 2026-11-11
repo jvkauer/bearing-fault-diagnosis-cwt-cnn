@@ -3,7 +3,7 @@ Módulo de Filtros de Aguçamento Espacial (Sharpening) para Escalogramas CWT.
 Projeto de Diagnóstico de Falhas em Mancais de Rolamento.
 """
 
-from typing import Tuple, Optional, Callable
+from typing import Tuple
 from PIL import Image, ImageFilter
 import torchvision.transforms as transforms
 import numpy as np
@@ -58,10 +58,10 @@ class SharpenTransform:
                 offset=0
             )
         elif self.method == "high_boost":
-            # High-Boost com ganho no centro
+            # High-Boost Filtering (A=1.5): 1.5*I + (I - I_blur) com soma normalizada = 1.5
             self.filter_obj = ImageFilter.Kernel(
                 (3, 3),
-                (-1, -1, -1, -1, 10, -1, -1, -1, -1),
+                (-2, -2, -2, -2, 19, -2, -2, -2, -2),
                 scale=2,
                 offset=0
             )

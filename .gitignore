@@ -15,7 +15,8 @@ data/
 *.7z
 *.tar.gz
 *.mat
-experimento_estrito
+experimento_estrito/
+
 # ==============================================================================
 # 3. Modelos Treinados, Pesos e Checkpoints PyTorch
 # ==============================================================================

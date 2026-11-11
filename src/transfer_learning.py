@@ -5,7 +5,7 @@ Implementa construtores e o pipeline de treinamento com checkpointing automátic
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Optional
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
@@ -43,7 +43,8 @@ def get_transfer_dataloaders(
     img_size: int = 224,
     batch_size: int = BATCH_SIZE,
     data_dir: Path = PROCESSED_DATA_DIR,
-    seed: int = RANDOM_SEED
+    seed: int = RANDOM_SEED,
+    custom_transform: Optional[Any] = None
 ) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
     """
     Retorna DataLoaders com o tamanho de imagem específico do modelo (224x224 ou 299x299).
@@ -53,15 +54,19 @@ def get_transfer_dataloaders(
         batch_size (int): Tamanho do lote.
         data_dir (Path): Diretório raiz dos dados processados (contendo train, val, test).
         seed (int): Semente pseudoaleatória para os DataLoaders.
+        custom_transform (Optional[Any]): Transformação personalizada torchvision para os escalogramas.
 
     Returns:
         Tuple contendo (train_loader, val_loader, test_loader, classes).
     """
-    transform = transforms.Compose([
-        transforms.Resize((img_size, img_size)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    if custom_transform is not None:
+        transform = custom_transform
+    else:
+        transform = transforms.Compose([
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
     
     data_dir = Path(data_dir)
     train_dir = data_dir / "train"
@@ -111,24 +116,27 @@ def build_transfer_model(
     model_name: str,
     num_classes: int = NUM_CLASSES,
     freeze_backbone: bool = True,
-    dropout_rate: float = DROPOUT_RATE
+    dropout_rate: float = DROPOUT_RATE,
+    pretrained: bool = True
 ) -> Tuple[nn.Module, int]:
     """
-    Constrói e adapta modelos pré-treinados no ImageNet para a classificação do CWRU.
+    Constrói e adapta modelos convolucionais (com ou sem pré-treino no ImageNet) para classificação.
 
     Args:
         model_name (str): Nome do modelo ('resnet18', 'inception_v3', 'efficientnet_b0').
         num_classes (int): Número de classes de saída.
         freeze_backbone (bool): Se True, congela os pesos do backbone pré-treinado.
         dropout_rate (float): Taxa de dropout para a camada de classificação (padrão em config.py).
+        pretrained (bool): Se True, carrega pesos pré-treinados no ImageNet; se False, inicializa do zero.
 
     Returns:
         Tuple contendo (model, img_size) — modelo adaptado e tamanho de entrada.
     """
-    model_name = model_name.lower()
+    model_name = model_name.lower().replace("-", "_")
     
     if model_name == "resnet18":
-        model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        weights = models.ResNet18_Weights.DEFAULT if pretrained else None
+        model = models.resnet18(weights=weights)
         if freeze_backbone:
             for param in model.parameters():
                 param.requires_grad = False
@@ -137,7 +145,8 @@ def build_transfer_model(
         img_size = 224
         
     elif model_name == "inception_v3":
-        model = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT)
+        weights = models.Inception_V3_Weights.DEFAULT if pretrained else None
+        model = models.inception_v3(weights=weights)
         model.aux_logits = False
         model.AuxLogits = None
         if freeze_backbone:
@@ -148,7 +157,8 @@ def build_transfer_model(
         img_size = 299
         
     elif model_name == "efficientnet_b0":
-        model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+        weights = models.EfficientNet_B0_Weights.DEFAULT if pretrained else None
+        model = models.efficientnet_b0(weights=weights)
         if freeze_backbone:
             for param in model.parameters():
                 param.requires_grad = False
@@ -169,7 +179,8 @@ def train_and_evaluate_transfer_model(
     dropout_rate: float = DROPOUT_RATE,
     data_dir: Path = PROCESSED_DATA_DIR,
     checkpoint_prefix: str = "checkpoint",
-    seed: int = RANDOM_SEED
+    seed: int = RANDOM_SEED,
+    custom_transform: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     Treina e avalia modelos de Transfer Learning com checkpointing automático
@@ -184,6 +195,7 @@ def train_and_evaluate_transfer_model(
         data_dir (Path): Diretório dos dados processados (train, val, test).
         checkpoint_prefix (str): Prefixo do arquivo de checkpoint salvo.
         seed (int): Semente para determinismo total (pesos, DataLoader e otimizador).
+        custom_transform (Optional[Any]): Transformação personalizada para os escalogramas.
 
     Returns:
         Dict contendo: model_name, history (train/val loss e acc),
@@ -195,7 +207,7 @@ def train_and_evaluate_transfer_model(
     img_size = 299 if model_name_clean == "inception_v3" else 224
     
     train_loader, val_loader, test_loader, classes = get_transfer_dataloaders(
-        img_size=img_size, data_dir=data_dir, seed=seed
+        img_size=img_size, data_dir=data_dir, seed=seed, custom_transform=custom_transform
     )
     
     model, _ = build_transfer_model(

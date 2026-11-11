@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from sklearn.metrics import confusion_matrix
 
-from src.config import FS, FREQ_MIN, FREQ_MAX, IMG_HEIGHT
+from src.config import FS, FREQ_MIN, FREQ_MAX
 from src.cwt_processor import compute_cwt
 
 
@@ -22,7 +22,7 @@ def plot_monograph_figure(
     freq_min: float = FREQ_MIN,
     freq_max: float = FREQ_MAX,
     cwt_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None
-):
+) -> None:
     """
     Gera e exibe o gráfico no padrão da Monografia TCC (Figura 5):
     - Painel (a): Sinal Bruto (Tempo em segundos vs Amplitude em g)
@@ -38,7 +38,6 @@ def plot_monograph_figure(
         cwt_fn (callable, optional): Função personalizada para cálculo de CWT.
     """
     time_vector = np.arange(len(signal_window)) / fs
-    target_freqs = np.linspace(freq_min, freq_max, IMG_HEIGHT)
     
     # Calcular magnitude da CWT
     if cwt_fn is not None:
@@ -61,7 +60,7 @@ def plot_monograph_figure(
     # --------------------------------------------------------------------------
     pcm = axs[1].imshow(
         scalogram_mat,
-        extent=[time_vector[0], time_vector[-1], target_freqs[0], target_freqs[-1]],
+        extent=[time_vector[0], time_vector[-1], freq_min, freq_max],
         cmap="jet",
         aspect="auto",
         origin="lower",
@@ -92,7 +91,7 @@ def plot_training_curves(
     history: Dict[str, Any],
     model_name: str,
     save_path: Optional[str] = None
-):
+) -> None:
     """
     Plota as curvas de aprendizado (Perda e Acurácia) de treino/validação,
     destacando a época do checkpoint (menor val_loss) salvo durante o treino.
@@ -166,7 +165,7 @@ def plot_confusion_matrix(
     res: Dict[str, Any],
     model_name: str,
     save_path: Optional[str] = None
-):
+) -> None:
     """
     Plota e exibe a Matriz de Confusão para as predições no conjunto de teste.
 

@@ -13,14 +13,21 @@ from scipy.interpolate import interp1d
 import pywt
 import matplotlib.pyplot as plt
 
-from src.config import WAVELET, IMG_HEIGHT
+from src.config import (
+    WAVELET,
+    IMG_HEIGHT,
+    ORDER_SAMPLES_PER_REV,
+    ORDER_NUM_REVS,
+    ORDER_MIN,
+    ORDER_MAX,
+)
 
 
 @lru_cache(maxsize=None)
 def get_order_scales(
-    samples_per_rev: int = 1024,
-    order_min: float = 0.5,
-    order_max: float = 20.0,
+    samples_per_rev: int = ORDER_SAMPLES_PER_REV,
+    order_min: float = ORDER_MIN,
+    order_max: float = ORDER_MAX,
     num_scales: int = IMG_HEIGHT
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calcula e armazena em cache as escalas da wavelet para o domínio de ordens."""
@@ -33,8 +40,8 @@ def resample_to_angle_domain(
     signal: np.ndarray,
     fs: float,
     rpm: float,
-    samples_per_rev: int = 1024,
-    num_revs: int = 4
+    samples_per_rev: int = ORDER_SAMPLES_PER_REV,
+    num_revs: int = ORDER_NUM_REVS
 ) -> np.ndarray:
     """
     Reamostra um sinal temporal para o domínio angular (amostras uniformes por volta do eixo).
@@ -88,9 +95,9 @@ def resample_to_angle_domain(
 
 def compute_order_cwt(
     angle_signal: np.ndarray,
-    samples_per_rev: int = 1024,
-    order_min: float = 0.5,
-    order_max: float = 20.0,
+    samples_per_rev: int = ORDER_SAMPLES_PER_REV,
+    order_min: float = ORDER_MIN,
+    order_max: float = ORDER_MAX,
     num_scales: int = IMG_HEIGHT
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -144,7 +151,7 @@ def plot_time_vs_order_comparison(
     
     # 2. CWT com Order Tracking (Ângulo-Ordem)
     ang_cwru = resample_to_angle_domain(sig_cwru, fs_cwru, rpm_cwru, samples_per_rev=1024, num_revs=4)
-    cwt_order_cwru, orders = compute_order_cwt(ang_cwru, samples_per_rev=1024, order_min=0.5, order_max=15.0)
+    cwt_order_cwru, _ = compute_order_cwt(ang_cwru, samples_per_rev=1024, order_min=0.5, order_max=15.0)
     
     ang_pad = resample_to_angle_domain(sig_pad, fs_pad, rpm_pad, samples_per_rev=1024, num_revs=4)
     cwt_order_pad, _ = compute_order_cwt(ang_pad, samples_per_rev=1024, order_min=0.5, order_max=15.0)

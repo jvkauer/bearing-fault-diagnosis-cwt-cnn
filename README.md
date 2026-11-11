@@ -21,6 +21,7 @@ Transformada Wavelet Contínua (CWT), *Computed Order Tracking* (COT) e Redes Ne
 - [Desempenho Computacional e Viabilidade em Tempo Real](#desempenho-computacional-e-viabilidade-em-tempo-real)
 - [Avaliação Cruzada e Análise de Domain Shift (Cross-Domain)](#avaliação-cruzada-e-análise-de-domain-shift-cross-domain)
 - [Adaptação de Domínio com Poucas Amostras (Few-Shot Domain Adaptation)](#adaptação-de-domínio-com-poucas-amostras-few-shot-domain-adaptation)
+- [Avaliação Experimental de Filtros de Aguçamento Espacial (Sharpening)](#avaliação-experimental-de-filtros-de-aguçamento-espacial-sharpening)
 - [Limitações Metodológicas e Direções Futuras](#limitações-metodológicas-e-direções-futuras)
 - [Estrutura do Repositório](#estrutura-do-repositório)
 - [Instalação](#instalação)
@@ -172,8 +173,8 @@ flowchart TD
         B1["Janelamento Temporal Fixo<br/>(1024 a 4096 amostras)"]
         B2["Computed Order Tracking (COT)<br/>(1024 amostras/rev, 4 voltas)"]
         C1["CWT Tempo-Frequência<br/>(cmor1.5-1.0 | 10 Hz a Nyquist)"]
-        C2["Order-CWT Ângulo-Ordem<br/>(cmor1.5-1.0 | 0.5 a 15.0 ordens)"]
-        D["Escalogramas 224x224 RGB<br/>(Percentil 1-99 / Z-Score Global)"]
+        C2["Order-CWT Ângulo-Ordem<br/>(cmor1.5-1.0 | 0.5 a 20.0 ordens)"]
+        D["Escalogramas 224x224 RGB<br/>(Percentil 1-99 / Normalização ImageNet)"]
     end
 
     subgraph Modelos["3. Aprendizado Profundo"]
@@ -210,7 +211,7 @@ Resultados obtidos em amostras de teste utilizando **particionamento estrito bas
 | Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
 |---|---|:---:|:---:|:---:|
 | **ResNet-18** | Fine-Tuning (`Freeze=False`) | **99.97%** | **100.00%** | 11,18 M |
-| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **99.25%** | **100.00%** | 21,79 M |
+| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **99.25%** | **99.94%** | 21,79 M |
 | **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **97.96%** | **100.00%** | 4,01 M |
 | **BearingCNN (Própria)** | Treino do Zero | **97.44%** | **100.00%** | 0,52 M |
 
@@ -238,20 +239,20 @@ Resultados obtidos em amostras de teste utilizando **particionamento estrito bas
 *450 amostras de teste sob condição inédita de $40\text{ Hz} / 10\text{ kN}$ ($2.400\text{ RPM}$) avaliando 3 rolamentos físicos exclusivos e nunca vistos durante o treinamento (`Bearing3_1` normal, `Bearing3_4` pista interna pura e `Bearing3_5` pista externa pura):*
 | Modelo | Estratégia | Acurácia Multiclasse | Detecção Binária (Normal vs. Falha) | Parâmetros |
 |---|---|:---:|:---:|:---:|
-| **ResNet-18** | Fine-Tuning (`Freeze=False`) | **95.78%** | **99.78%** | 11,18 M |
-| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **95.56%** | **98.22%** | 4,01 M |
-| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **95.33%** | **99.56%** | 21,79 M |
-| **BearingCNN (Própria)** | Treino do Zero | **71.78%** | **95.33%** | 0,52 M |
+| **ResNet-18** | Fine-Tuning (`Freeze=False`) | **95.78%** | **100.00%** | 11,18 M |
+| **EfficientNet-B0** | Fine-Tuning (`Freeze=False`) | **95.56%** | **100.00%** | 4,01 M |
+| **Inception-v3** | Fine-Tuning (`Freeze=False`) | **95.33%** | **100.00%** | 21,79 M |
+| **BearingCNN (Própria)** | Treino do Zero | **71.78%** | **99.78%** | 0,52 M |
 
 > [!NOTE]
 > **O Desafio do Reconhecimento em Rolamentos Inéditos:**  
-> O XJTU-SY é o único benchmark verdadeiramente não-trivial no regime intra-domínio, pois seu teste opera com rolamentos físicos mutuamente exclusivos (*Leave-Bearing-Out*). A BearingCNN (0,52 M parâmetros treinada do zero) atinge 71,78% de acurácia multiclasse (embora mantenha 95,33% na detecção binária de falha). Em contrapartida, os modelos de Transfer Learning pré-treinados no ImageNet (ResNet-18, EfficientNet-B0 e Inception-v3) generalizam para a faixa de 95,33% a 95,78%, demonstrando a superioridade dos extratores profundos pré-treinados frente a variações estruturais de mancais inéditos.
+> O XJTU-SY é o único benchmark verdadeiramente não-trivial no regime intra-domínio, pois seu teste opera com rolamentos físicos mutuamente exclusivos (*Leave-Bearing-Out*). A BearingCNN (0,52 M parâmetros treinada do zero) atinge 71,78% de acurácia multiclasse (embora mantenha 99,78% na detecção binária de falha, enquanto os modelos profundos atingem 100,00%). Em contrapartida, os modelos de Transfer Learning pré-treinados no ImageNet (ResNet-18, EfficientNet-B0 e Inception-v3) generalizam para a faixa de 95,33% a 95,78%, demonstrando a superioridade dos extratores profundos pré-treinados frente a variações estruturais de mancais inéditos.
 
 ---
 
 ## Desempenho Computacional e Viabilidade em Tempo Real
 
-Para avaliar a viabilidade prática em sistemas industriais de monitoramento contínuo (*Condition Monitoring*) e computação de borda (*Edge AI*), mensurou-se o custo computacional teórico (GFLOPs), a pegada de memória (MB) e a latência empírica de inferência unitária (`batch_size = 1`, precedida de 50 iterações de *warm-up* e sincronização explícita com `torch.cuda.synchronize()`) em um ambiente equipado com GPU **NVIDIA GeForce RTX 2060 SUPER (8 GB)** e CPU **AMD Ryzen 5 2600 Six-Core (3,40 GHz)**. O tempo médio de geração do escalograma CWT por janela de 1.024 amostras foi mensurado em **$49{,}47 \pm 4{,}01\text{ ms}$** na CPU (frente a uma duração física de $85{,}33\text{ ms}$ por janela amostrada a 12 kHz no CWRU).
+Para avaliar a viabilidade prática em sistemas industriais de monitoramento contínuo (*Condition Monitoring*) e computação de borda (*Edge AI*), mensurou-se o custo computacional teórico (GFLOPs), a pegada de memória (MB) e a latência empírica de inferência unitária (`batch_size = 1`, precedida de 20 iterações de *warm-up* e sincronização explícita com `torch.cuda.synchronize()`) em um ambiente equipado com GPU **NVIDIA GeForce RTX 2060 SUPER (8 GB)** e CPU **AMD Ryzen 5 2600 Six-Core (3,40 GHz)**. O tempo médio de geração do escalograma CWT por janela de 1.024 amostras foi mensurado em **$49{,}47 \pm 4{,}01\text{ ms}$** na CPU (frente a uma duração física de $85{,}33\text{ ms}$ por janela amostrada a 12 kHz no CWRU).
 
 | Arquitetura | Parâmetros (M) | Tamanho (MB) | GFLOPs | Treino (s/época) | Inferência GPU (ms) | Inferência CPU (ms) | Pipeline Total CPU (ms) | Acurácia CWRU (%) |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -287,12 +288,12 @@ Transferência direta entre os 3 bancos de dados sem calibração prévia (*Zero
 |---|:---:|:---:|:---:|
 | **CWRU** | *99.97% (In-Domain)* | **19.20%** | **1.33%** |
 | **Paderborn** | **26.23%** | *100.00% (In-Domain)* | **66.67%** |
-| **XJTU-SY** | **20.79%** | **35.20%** | *100.00% (In-Domain)* |
+| **XJTU-SY** | **20.79%** | **35.20%** | *95.78% (In-Domain)* |
 
 <p align="center">
   <img src="docs/images/cross_domain_matrix_heatmap.png" width="550" alt="Heatmap da Matriz de Domain Shift Cross-Domain">
 </p>
-<p align="center"><sub>Matriz de transferência cruzada 3x3 no domínio Tempo-Frequência: a diagonal principal exibe o desempenho in-domain, enquanto os elementos fora da diagonal revelam a severa barreira de Domain Shift (queda para a faixa de 17% a 33%).</sub></p>
+<p align="center"><sub>Matriz de transferência cruzada 3x3 no domínio Tempo-Frequência: a diagonal principal exibe o desempenho in-domain, enquanto os elementos fora da diagonal revelam a severa barreira de Domain Shift (queda para a faixa de 1,33% a 66,67%, média de 28,24%).</sub></p>
 
 ---
 
@@ -377,6 +378,36 @@ O modelo de referência ResNet-18 atingiu a maior eficácia global de generaliza
 
 ---
 
+## Avaliação Experimental de Filtros de Aguçamento Espacial (Sharpening)
+
+Para investigar se o realce espacial de bordas nos escalogramas 2D auxilia ou prejudica o reconhecimento de padrões em arquiteturas compactas treinadas do zero (**BearingCNN**), o Módulo 7 (`notebooks/7_filtros_agucamento/`) avalia dois filtros clássicos de processamento de imagens aplicados antes da normalização: **Unsharp Masking** ($\text{radius}=1{,}5$, $\text{percent}=150\%$, $\text{threshold}=3$) e **Laplaciano $3\times 3$** (4-vizinhos, centro $= 5$).
+
+### 1. Desempenho Intra-Domínio na BearingCNN (CWT Tempo vs. Order-CWT)
+
+| Bancada | Domínio | Sem Filtro (Baseline) | Unsharp Masking | Laplaciano $3\times 3$ | Efeito Observado |
+|---|:---:|:---:|:---:|:---:|---|
+| **CWRU** | Tempo (CWT) | **97,44%** | 94,00% ($-3{,}44\text{ p.p.}$) | 97,31% ($-0{,}13\text{ p.p.}$) | Saturação de contraste sem ganho intra-domínio |
+| **CWRU** | Ângulo-Ordem (COT) | **97,85%** | **98,42%** ($+0{,}57\text{ p.p.}$) | 95,43% ($-2{,}42\text{ p.p.}$) | Leve ganho com Unsharp sobre ordens estacionárias |
+| **Paderborn** | Tempo / Ordem | **100,00%** | **100,00%** | **100,00%** | Teto de separabilidade mantido nos dois domínios |
+| **XJTU-SY** | Tempo (CWT) | **71,78%** | 70,22% ($-1{,}56\text{ p.p.}$) | 69,11% ($-2{,}67\text{ p.p.}$) | Amplificação de ruído estocástico de fundo (*Leave-Bearing-Out*) |
+| **XJTU-SY** | Ângulo-Ordem (COT) | **96,25%** | 85,97% ($-10{,}28\text{ p.p.}$) | 65,97% ($-30{,}28\text{ p.p.}$) | Degradação intra-domínio por realce de artefatos de interpolação |
+
+### 2. Impacto no Few-Shot Cross-Domain ($K=5$, Order-CWT na BearingCNN, 10 Sementes)
+
+Embora os filtros de aguçamento reduzam a acurácia no regime intra-domínio do XJTU-SY, no cenário de **Few-Shot Domain Adaptation ($K=5$) com Order-CWT**, o filtro **Laplaciano $3\times 3$** atua como um extrator de bordas invariante ao nível médio de energia entre bancadas distintas, proporcionando saltos expressivos nas direções em que a BearingCNN tinha maior dificuldade:
+
+| Par de Transferência (Order-CWT, $K=5$) | Sem Filtro (Baseline) | Unsharp Masking | Laplaciano $3\times 3$ | Variação (Laplaciano vs. Baseline) |
+|---|:---:|:---:|:---:|:---:|
+| **Paderborn $\rightarrow$ XJTU-SY** | 62,53% ± 6,29% | 75,35% ± 9,19% | **84,62% ± 3,42%** | **$+22{,}09\text{ p.p.}$** (dispersão reduzida à metade) |
+| **Paderborn $\rightarrow$ CWRU** | 28,41% ± 6,62% | 34,90% ± 8,16% | **45,14% ± 6,28%** | **$+16{,}73\text{ p.p.}$** |
+| **XJTU-SY $\rightarrow$ CWRU** | 46,37% ± 8,00% | 48,14% ± 7,26% | **57,00% ± 3,77%** | **$+10{,}63\text{ p.p.}$** |
+| **CWRU $\rightarrow$ XJTU-SY** | 91,81% ± 4,14% | 92,05% ± 3,84% | **92,40% ± 1,45%** | **$+0{,}59\text{ p.p.}$** |
+| **CWRU $\rightarrow$ Paderborn** | **55,15% ± 7,61%** | 50,15% ± 5,64% | 43,72% ± 6,16% | $-11{,}43\text{ p.p.}$ |
+| **XJTU-SY $\rightarrow$ Paderborn** | **60,00% ± 9,00%** | 59,05% ± 7,96% | 55,66% ± 9,92% | $-4{,}34\text{ p.p.}$ |
+| **MÉDIA GLOBAL (6 Pares)** | 57,38% ± 6,94% | 59,94% ± 7,01% | **63,09% ± 5,17%** | **$+5{,}71\text{ p.p.}$** |
+
+---
+
 ## Limitações Metodológicas e Direções Futuras
 
 Em conformidade com as boas práticas de reprodutibilidade e transparência científica em *Condition Monitoring*, destacam-se as seguintes delimitações do protocolo experimental atual e oportunidades para trabalhos futuros:
@@ -439,7 +470,7 @@ bearing-fault-diagnosis-cwt-cnn/
 │   ├── config.py                   # Parâmetros globais, diretórios, geometrias e frequências
 │   ├── cwt_processor.py            # Cálculo da CWT e exportação de escalogramas 224x224
 │   ├── order_tracking.py           # Algoritmos de Computed Order Tracking (COT) e Order-CWT
-│   ├── sharpening.py               # Filtros de aguçamento espacial 2D (Laplaciano 3x3 e Unsharp Masking 5x5)
+│   ├── sharpening.py               # Filtros de aguçamento espacial 2D (Unsharp Masking, Laplaciano 3x3 e High-Boost)
 │   ├── dataset_cwru.py             # Parser e janelamento dos arquivos .mat do CWRU
 │   ├── generate_dataset_cwru.py    # Gerador de escalogramas CWRU sem vazamento de dados
 │   ├── dataset_paderborn.py        # Parser e janelamento dos arquivos .mat de Paderborn
@@ -505,8 +536,9 @@ data/
 │       └── KA15/      # Arquivos .mat de dano real por indentação na pista externa (ex: N09_M07_F10_KA15_1.mat, ...)
 └── xjtu/
     └── raw/
-        ├── 35Hz12kN/  # Pastas Bearing1_1/ e Bearing1_2/ com arquivos .csv (Normal e Outer Race)
-        └── 37.5Hz11kN/# Pasta Bearing2_1/ com arquivos .csv (Inner Race)
+        ├── 35Hz12kN/  # Pastas Bearing1_1/ (Normal) e Bearing1_2/ (Outer Race) com arquivos .csv
+        ├── 37.5Hz11kN/# Pastas Bearing2_1/ (Inner), Bearing2_2/ (Normal) e Bearing2_4/ (Outer)
+        └── 40Hz10kN/  # Pastas Bearing3_1/ (Normal), Bearing3_3/ (Inner), Bearing3_4/ (Inner) e Bearing3_5/ (Outer)
 ```
 
 #### Links Oficiais para Download
@@ -592,7 +624,7 @@ O desenvolvimento deste trabalho apoia-se nos seguintes referenciais teóricos e
 - [x] Pipeline de pré-processamento e geração de escalogramas 2D com particionamento estrito sem *Data Leakage*
 - [x] Desenvolvimento da arquitetura própria `BearingCNN` (**97.44%** CWRU, **100.00%** Paderborn, **71.78%** XJTU-SY sob *Leave-Bearing-Out*)
 - [x] Benchmark de *Transfer Learning* com ResNet-18, EfficientNet-B0 e Inception-v3 (até **99.97%** no CWRU, **100.00%** no Paderborn e **95.78%** no XJTU-SY)
-- [x] Diagnóstico binário de integridade com **100.00%** de precisão e recall (zero falsos alarmes e zero falsos negativos no CWRU e Paderborn)
+- [x] Diagnóstico binário de integridade com **100.00%** de acurácia nos modelos ResNet-18 e EfficientNet-B0 em todas as três bancadas (CWRU, Paderborn e XJTU-SY)
 - [x] Integração de bancos de dados com danos industriais acelerados (Paderborn University e XJTU-SY)
 - [x] Estudo experimental e caracterização da barreira física de *Domain Shift* em avaliação cruzada zero-shot
 - [x] Implementação de *Computed Order Tracking* (COT) e Transformada Wavelet em Ângulo-Ordem (Order-CWT)

@@ -35,7 +35,6 @@ from src.config import (
     ORDER_NUM_REVS,
     ORDER_MIN,
     ORDER_MAX,
-    RANDOM_SEED
 )
 from src.dataset_cwru import load_cwru_mat_file, get_cwru_strict_splits
 from src.dataset_paderborn import load_paderborn_mat_file, get_paderborn_strict_splits
